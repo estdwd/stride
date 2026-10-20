@@ -5,12 +5,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#000000" />
   <title>Stride | App</title>
+
+  <!-- Not logged in? Go to login. Otherwise the intro plays on every load. -->
+  <script>
+    (function () {
+      var THIRTY = 30 * 24 * 60 * 60 * 1000;
+      function ok() {
+        try {
+          var u = JSON.parse(localStorage.getItem('stride_user'));
+          var t = Number(localStorage.getItem('stride_last_active'));
+          return !!(u && u.id && u.name && u.email && t && (Date.now() - t) < THIRTY);
+        } catch (e) { return false; }
+      }
+      function clearAuth() {
+        try {
+          localStorage.removeItem('stride_user');
+          localStorage.removeItem('stride_last_active');
+        } catch (e) {}
+      }
+      window.strideSessionOk = ok;
+      window.strideClearAuth = clearAuth;
+
+      if (!ok()) {
+        clearAuth();
+        document.documentElement.style.visibility = 'hidden';
+        location.replace('index.html');
+        return;
+      }
+
+      document.documentElement.classList.add('has-intro');
+    })();
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     :root {
+      --logo: #C9500F;
       --bg: #000;
       --ink: #0b0b0b;
       --muted: #9a9a9a;
@@ -28,7 +61,7 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Outfit', -apple-system, sans-serif;
+      font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -48,26 +81,15 @@
     button:focus-visible, .pill:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
     svg { width: 20px; height: 20px; }
 
-    /* ---------- BACKGROUND: black base + blurred blue/orange glow + halftone grid ---------- */
-    .bg {
-      position: fixed; inset: 0; z-index: -1;
-      background: #020305;
-      overflow: hidden;
-    }
-    .glow {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(70px);
-      will-change: transform;
-    }
-    /* cool blue pool, top left */
+    /* ---------- BACKGROUND ---------- */
+    .bg { position: fixed; inset: 0; z-index: -1; background: #020305; overflow: hidden; }
+    .glow { position: absolute; border-radius: 50%; filter: blur(70px); will-change: transform; }
     .g-blue {
       width: 80vmax; height: 62vmax; max-width: 620px; max-height: 520px;
       left: -45%; top: -12%;
       background: radial-gradient(closest-side, rgba(24,120,170,0.75), rgba(10,60,95,0.35) 55%, transparent 100%);
       animation: driftA 38s ease-in-out infinite alternate;
     }
-    /* orange arc sweeping in from the right */
     .g-arc {
       width: 110vmax; height: 52vmax; max-width: 900px; max-height: 440px;
       right: -75%; top: 14%;
@@ -75,14 +97,12 @@
       transform: rotate(-24deg);
       animation: driftB 44s ease-in-out infinite alternate;
     }
-    /* big warm pool lower down */
     .g-orange {
       width: 90vmax; height: 90vmax; max-width: 640px; max-height: 640px;
       left: -10%; bottom: -34%;
       background: radial-gradient(closest-side, rgba(255,105,28,0.6), rgba(160,50,8,0.28) 58%, transparent 100%);
       animation: driftC 50s ease-in-out infinite alternate;
     }
-    /* deep blue hint, bottom right */
     .g-deep {
       width: 70vmax; height: 70vmax; max-width: 480px; max-height: 480px;
       right: -40%; bottom: -8%;
@@ -93,23 +113,87 @@
     @keyframes driftB { from { transform: rotate(-24deg) translate3d(0,0,0); } to { transform: rotate(-18deg) translate3d(-90px, 50px, 0); } }
     @keyframes driftC { to { transform: translate3d(60px, -90px, 0) scale(1.1); } }
 
-    /* black shade keeps it mostly dark */
     .bg::before {
       content: ""; position: absolute; inset: 0;
       background:
         radial-gradient(120% 70% at 50% 50%, transparent 0%, rgba(0,0,0,0.55) 100%),
         rgba(0,0,0,0.3);
     }
-    /* halftone dot grid: light only shows through the dots */
     .bg::after {
       content: ""; position: absolute; inset: 0;
       background-image: radial-gradient(circle at center, rgba(0,0,0,0) 0, rgba(0,0,0,0) 1px, rgba(0,0,0,0.82) 1.7px);
       background-size: 5px 5px;
     }
 
-    @media (prefers-reduced-motion: reduce) {
-      .glow { animation: none; }
+    @media (prefers-reduced-motion: reduce) { .glow { animation: none; } }
+
+    /* ---------- SPLASH INTRO: logo glows in, spins + slides left, name reveals ---------- */
+    #splash {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #000;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+      /* CSS failsafe: never gets stuck even if JS fails */
+      animation: splashOut .5s ease 4.6s forwards;
     }
+    #splash.leaving { animation: splashOut .45s ease forwards; }
+    .no-intro #splash { display: none; }
+    @keyframes splashOut { to { opacity: 0; visibility: hidden; } }
+
+    .splash-glow {
+      position: absolute; left: 50%; top: 50%;
+      width: 120vmin; height: 120vmin;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(closest-side, rgba(255,110,30,0.55), rgba(190,60,10,0.22) 55%, transparent 100%);
+      filter: blur(30px);
+      animation: glowIn 1.6s ease-out .1s backwards;
+    }
+    .splash-dots {
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle at center, rgba(0,0,0,0) 0, rgba(0,0,0,0) 1px, rgba(0,0,0,0.82) 1.7px);
+      background-size: 5px 5px;
+    }
+    @keyframes glowIn { from { opacity: 0; transform: translate(-50%, -50%) scale(.6); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+
+    .splash-row { position: relative; display: flex; align-items: center; justify-content: center; }
+
+    /* wrapper handles the spin so it never clashes with the glow-in animation */
+    .splash-spin {
+      display: flex; flex-shrink: 0;
+      animation: spinTurn 1s cubic-bezier(.65, 0, .35, 1) 1.5s both;
+    }
+    @keyframes spinTurn { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .splash-logo {
+      width: 67px; height: 84px; flex-shrink: 0;
+      color: var(--logo);
+      filter: drop-shadow(0 0 22px rgba(255, 110, 30, 0.6));
+      animation: logoIn 1.2s cubic-bezier(.16, 1, .3, 1) .2s both;
+    }
+    @keyframes logoIn {
+      0%   { opacity: 0; transform: scale(.7); filter: drop-shadow(0 0 0 rgba(255,110,30,0)); }
+      60%  { opacity: 1; transform: scale(1.05); filter: drop-shadow(0 0 38px rgba(255,120,30,0.95)); }
+      100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 22px rgba(255,110,30,0.6)); }
+    }
+    .splash-name {
+      overflow: hidden; white-space: nowrap;
+      font-size: 3rem; font-weight: 500; letter-spacing: -0.04em; line-height: 1.25;
+      max-width: 0; opacity: 0;
+      animation: nameOut 1s cubic-bezier(.65, 0, .35, 1) 1.5s forwards;
+    }
+    .splash-name span { display: inline-block; animation: nameSlide 1s cubic-bezier(.65, 0, .35, 1) 1.5s both; }
+    @keyframes nameOut { from { max-width: 0; margin-left: 0; opacity: 0; } to { max-width: 3.6em; margin-left: 18px; opacity: 1; } }
+    @keyframes nameSlide { from { transform: translateX(-50px); } to { transform: none; } }
+
+    @media (prefers-reduced-motion: reduce) {
+      .splash-logo, .splash-glow, .splash-name, .splash-name span { animation-duration: .01s; animation-delay: 0s; }
+      .splash-spin { animation: none; }
+    }
+
+    /* app content fades up after the splash */
+    .page-container, .dock { transition: opacity .7s ease, transform .7s cubic-bezier(.16, 1, .3, 1); }
+    html.has-intro:not(.revealed) .page-container,
+    html.has-intro:not(.revealed) .dock { opacity: 0; transform: translateY(18px); }
 
     /* ---------- PAGES ---------- */
     .page-container { position: relative; width: 100%; }
@@ -126,15 +210,10 @@
     }
 
     /* ---------- HEADER ---------- */
-    .top-header {
-      display: flex; justify-content: space-between; align-items: flex-start;
-      margin-bottom: 26px;
-    }
+    .top-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 26px; }
     .top-header h1 {
       font-size: clamp(2.9rem, 14vw, 4.2rem);
-      font-weight: 400;
-      letter-spacing: -0.045em;
-      line-height: 1.02;
+      font-weight: 400; letter-spacing: -0.045em; line-height: 1.02;
     }
     .round-btn {
       width: 50px; height: 50px; border-radius: 50%;
@@ -179,14 +258,8 @@
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .card[hidden] { display: none; }
 
-    .card {
-      position: relative;
-      color: var(--ink);
-      border-radius: 44px;
-      transition: transform .18s ease;
-    }
+    .card { position: relative; color: var(--ink); border-radius: 44px; transition: transform .18s ease; }
     .card:active { transform: scale(0.98); }
-
     .card::before {
       content: "";
       position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
@@ -200,10 +273,7 @@
     .c-green  { background: var(--green); }
     .c-blue   { background: var(--blue); }
 
-    .card h3 {
-      font-size: 1.3rem; font-weight: 500;
-      letter-spacing: -0.02em; line-height: 1.15;
-    }
+    .card h3 { font-size: 1.3rem; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; }
     .card .sub { font-size: .78rem; font-weight: 400; opacity: .6; margin-top: 6px; }
 
     .heart {
@@ -227,12 +297,10 @@
     .tasks { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-right: 4px; }
     .tasks li {
       display: flex; align-items: center; gap: 10px;
-      padding: 11px 12px;
-      border-radius: 999px;
+      padding: 11px 12px; border-radius: 999px;
       background: rgba(0,0,0,0.12);
       font-size: .95rem; font-weight: 500;
-      cursor: pointer;
-      transition: opacity .2s;
+      cursor: pointer; transition: opacity .2s;
     }
     .chk {
       width: 24px; height: 24px; border-radius: 50%;
@@ -253,16 +321,12 @@
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='320' viewBox='0 0 200 320' fill='none' stroke='rgba(0,0,0,0.09)' stroke-width='1.5'%3E%3Cellipse cx='120' cy='170' rx='30' ry='46'/%3E%3Cellipse cx='120' cy='170' rx='52' ry='76'/%3E%3Cellipse cx='120' cy='170' rx='76' ry='108'/%3E%3Cellipse cx='120' cy='170' rx='102' ry='142'/%3E%3Cellipse cx='120' cy='170' rx='130' ry='178'/%3E%3C/svg%3E");
       background-size: cover; background-position: center;
     }
-    .streak-num {
-      font-size: 7.6rem; font-weight: 600; letter-spacing: -0.06em; line-height: .8;
-      margin-bottom: 14px;
-    }
+    .streak-num { font-size: 7.6rem; font-weight: 600; letter-spacing: -0.06em; line-height: .8; margin-bottom: 14px; }
     .week { display: flex; gap: 5px; margin-right: 4px; }
     .week div { flex: 1; text-align: center; font-size: .66rem; font-weight: 500; opacity: .75; }
     .week b {
       display: block; width: 100%; aspect-ratio: 1; border-radius: 50%;
-      margin-bottom: 5px;
-      border: 2px solid rgba(0,0,0,0.3);
+      margin-bottom: 5px; border: 2px solid rgba(0,0,0,0.3);
     }
     .week .on b { background: var(--ink); border-color: var(--ink); }
 
@@ -275,8 +339,7 @@
     .badge {
       width: 62px; height: 62px; border-radius: 50%;
       background: #fff; color: var(--ink);
-      display: grid; place-items: center;
-      flex-shrink: 0;
+      display: grid; place-items: center; flex-shrink: 0;
     }
     .badge svg { width: 28px; height: 28px; stroke-width: 1.8; }
     .wide .text { flex: 1; min-width: 0; }
@@ -292,8 +355,7 @@
       -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 44px;
-      padding: 30px 24px;
-      margin-bottom: 14px;
+      padding: 30px 24px; margin-bottom: 14px;
     }
     .panel h3 { font-size: 1.2rem; font-weight: 500; margin-bottom: 16px; }
     .big { font-size: 4.4rem; font-weight: 400; letter-spacing: -0.05em; line-height: 1; margin-bottom: 18px; }
@@ -321,7 +383,7 @@
       font-weight: 500; font-size: 1rem;
     }
 
-    /* ---------- FLOATING DOCK (icons only) ---------- */
+    /* ---------- FLOATING DOCK ---------- */
     .dock {
       position: fixed; left: 0; right: 0; bottom: 0;
       padding: 40px 0 22px;
@@ -332,8 +394,7 @@
     .dock-inner {
       pointer-events: auto;
       display: flex; align-items: center; gap: 2px;
-      padding: 6px;
-      border-radius: 999px;
+      padding: 6px; border-radius: 999px;
       background: rgba(24,24,24,0.7);
       -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
       border: 1px solid rgba(255,255,255,0.1);
@@ -354,9 +415,29 @@
     }
     .fab svg { width: 28px; height: 28px; }
     .fab:active { transform: scale(0.92); }
+
+    /* Fallback if the icon library fails to load: show text instead */
+    .no-icons .nav-item { width: auto; padding: 0 12px; border-radius: 24px; font-size: .75rem; }
+    .no-icons .nav-item::after { content: attr(aria-label); }
+    .no-icons .fab::after { content: "+"; font-size: 2rem; line-height: 1; }
+    .no-icons .heart::after { content: "\2665"; font-size: 1.1rem; }
   </style>
 </head>
 <body>
+
+  <!-- INTRO SPLASH -->
+  <div id="splash" aria-hidden="true">
+    <div class="splash-glow"></div>
+    <div class="splash-dots"></div>
+    <div class="splash-row">
+      <span class="splash-spin">
+        <svg class="splash-logo" viewBox="0 0 2333 2916" fill="currentColor" fill-rule="evenodd">
+          <path d="M488 0H2333V2187A218.5 218.5 0 0 0 2333 2624V2916H488A488 488 0 0 1 0 2428V488A488 488 0 0 1 488 0ZM510 2186H1869C1808 2300 1808 2510 1869 2624H510A219 219 0 0 1 510 2186ZM1109 396A60 60 0 0 1 1224 396L1346 795A60 60 0 0 0 1386 835L1785 957A60 60 0 0 1 1785 1072L1386 1194A60 60 0 0 0 1346 1234L1224 1633A60 60 0 0 1 1109 1633L987 1234A60 60 0 0 0 947 1194L548 1072A60 60 0 0 1 548 957L947 835A60 60 0 0 0 987 795Z"/>
+        </svg>
+      </span>
+      <div class="splash-name"><span>Stride</span></div>
+    </div>
+  </div>
 
   <!-- ANIMATED GLOW BACKGROUND -->
   <div class="bg" aria-hidden="true">
@@ -386,7 +467,6 @@
 
       <div class="grid" id="cards">
 
-        <!-- Plan for the day -->
         <article class="card tall c-orange" data-cat="streaks">
           <div class="card-head">
             <h3>Plan for<br/>the Day</h3>
@@ -399,7 +479,6 @@
           </ul>
         </article>
 
-        <!-- Streak -->
         <article class="card tall streak" data-cat="streaks">
           <div class="card-head">
             <div>
@@ -422,7 +501,6 @@
           </div>
         </article>
 
-        <!-- Recommended -->
         <article class="card wide c-cream" data-cat="exams">
           <div class="badge"><i data-lucide="atom"></i></div>
           <div class="text">
@@ -432,7 +510,6 @@
           <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
         </article>
 
-        <!-- Full mock -->
         <article class="card wide c-green" data-cat="exams">
           <div class="badge"><i data-lucide="target"></i></div>
           <div class="text">
@@ -442,7 +519,6 @@
           <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
         </article>
 
-        <!-- Weekly challenge -->
         <article class="card wide c-blue" data-cat="streaks">
           <div class="badge"><i data-lucide="trophy"></i></div>
           <div class="text">
@@ -503,7 +579,7 @@
           <div class="line"><span>Course</span><span id="profile-course">Sciences</span></div>
         </div>
 
-        <button class="logout" onclick="logout()">Log Out</button>
+        <button class="logout" id="logout-btn">Log Out</button>
       </div>
     </section>
 
@@ -521,91 +597,130 @@
   </nav>
 
   <script>
-    // --- AUTH CHECK ---
-    const USER_KEY = 'stride_user';
-    const LAST_ACTIVE = 'stride_last_active';
-    const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+    (function () {
+      const html = document.documentElement;
 
-    const user = JSON.parse(localStorage.getItem(USER_KEY));
-    const lastActive = localStorage.getItem(LAST_ACTIVE);
+      // ---------- AUTH GUARD ----------
+      function toLogin() {
+        if (window.strideClearAuth) window.strideClearAuth();
+        html.style.visibility = 'hidden';
+        location.replace('index.html');
+      }
 
-    if (!user || !lastActive || (Date.now() - lastActive > THIRTY_DAYS)) {
-      localStorage.clear();
-      window.location.href = 'index.html';
-    } else {
-      localStorage.setItem(LAST_ACTIVE, Date.now());
-      document.getElementById('profile-name').innerText = user.name;
-      document.getElementById('profile-avatar').innerText = user.name.charAt(0).toUpperCase();
-      document.getElementById('profile-email').innerText = user.email;
-      document.getElementById('profile-id').innerText = user.id;
-      document.getElementById('profile-course').innerText = user.course;
-    }
+      function readUser() {
+        try { return JSON.parse(localStorage.getItem('stride_user')); } catch (e) { return null; }
+      }
 
-    // --- TABS ---
-    const navBtns = document.querySelectorAll('.nav-item');
-    const pages = document.querySelectorAll('.page');
+      if (!window.strideSessionOk || !window.strideSessionOk()) { toLogin(); return; }
+      const user = readUser();
+      if (!user) { toLogin(); return; }
 
-    function goTo(id) {
-      if (document.getElementById(id).classList.contains('active')) return;
-      navBtns.forEach(b => b.classList.toggle('active', b.dataset.target === id));
-      pages.forEach(p => p.classList.toggle('active', p.id === id));
-      window.scrollTo({ top: 0 });
-    }
+      // Keep the session fresh (rolling 30 days)
+      function touch() { try { localStorage.setItem('stride_last_active', String(Date.now())); } catch (e) {} }
+      touch();
 
-    navBtns.forEach(btn => btn.addEventListener('click', () => goTo(btn.dataset.target)));
-    document.getElementById('fab').addEventListener('click', () => goTo('practice'));
-    document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => goTo(b.dataset.go)));
-
-    // --- HOME: FILTERS, HEARTS, TASKS ---
-    const cards = [...document.querySelectorAll('#cards .card')];
-    const pills = [...document.querySelectorAll('.pill')];
-    const emptyMsg = document.getElementById('empty');
-    let currentFilter = 'all';
-
-    function matches(card, f) {
-      if (f === 'all') return true;
-      if (f === 'saved') return card.classList.contains('saved');
-      return card.dataset.cat === f;
-    }
-
-    function render() {
-      let shown = 0;
-      cards.forEach(c => {
-        const ok = matches(c, currentFilter);
-        c.hidden = !ok;
-        if (ok) shown++;
+      // Callbacks: restored from back/forward cache, logged out in another tab, returning to the tab
+      window.addEventListener('pageshow', e => { if (e.persisted && !window.strideSessionOk()) toLogin(); });
+      window.addEventListener('storage', e => { if (e.key === 'stride_user' && !e.newValue) toLogin(); });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          if (!window.strideSessionOk()) toLogin(); else touch();
+        }
       });
-      emptyMsg.hidden = shown > 0;
-      pills.forEach(p => {
-        p.classList.toggle('active', p.dataset.filter === currentFilter);
-        p.querySelector('.count').textContent = cards.filter(c => matches(c, p.dataset.filter)).length;
-      });
-    }
 
-    pills.forEach(p => p.addEventListener('click', () => {
-      currentFilter = p.dataset.filter;
-      render();
-    }));
+      window.logout = function () {
+        if (window.strideClearAuth) window.strideClearAuth();
+        location.replace('index.html');
+      };
+      document.getElementById('logout-btn').addEventListener('click', window.logout);
 
-    cards.forEach(card => {
-      card.querySelector('.heart').addEventListener('click', e => {
-        e.stopPropagation();
-        card.classList.toggle('saved');
+      // ---------- PROFILE ----------
+      const name = (user.name || 'Student').toString();
+      document.getElementById('profile-name').textContent = name;
+      document.getElementById('profile-avatar').textContent = name.charAt(0).toUpperCase();
+      document.getElementById('profile-email').textContent = user.email || '';
+      document.getElementById('profile-id').textContent = user.id || 'STR-0000';
+      document.getElementById('profile-course').textContent = user.course || 'Sciences';
+
+      // ---------- ICONS (with fallback) ----------
+      if (window.lucide) { lucide.createIcons(); } else { html.classList.add('no-icons'); }
+
+      // ---------- INTRO SPLASH (plays on every open / refresh) ----------
+      const splash = document.getElementById('splash');
+      function endSplash() {
+        if (!splash || splash.dataset.done) return;
+        splash.dataset.done = '1';
+        splash.classList.add('leaving');
+        html.classList.add('revealed');
+        setTimeout(() => splash.remove(), 600);
+      }
+      if (splash) {
+        setTimeout(endSplash, 3400);
+        splash.addEventListener('click', endSplash); // tap to skip
+      } else {
+        html.classList.add('revealed');
+      }
+
+      // ---------- TABS ----------
+      const navBtns = document.querySelectorAll('.nav-item');
+      const pages = document.querySelectorAll('.page');
+
+      function goTo(id) {
+        if (document.getElementById(id).classList.contains('active')) return;
+        navBtns.forEach(b => b.classList.toggle('active', b.dataset.target === id));
+        pages.forEach(p => p.classList.toggle('active', p.id === id));
+        window.scrollTo({ top: 0 });
+      }
+
+      navBtns.forEach(btn => btn.addEventListener('click', () => goTo(btn.dataset.target)));
+      document.getElementById('fab').addEventListener('click', () => goTo('practice'));
+      document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => goTo(b.dataset.go)));
+
+      // ---------- HOME: FILTERS, HEARTS, TASKS ----------
+      const cards = [...document.querySelectorAll('#cards .card')];
+      const pills = [...document.querySelectorAll('.pill')];
+      const emptyMsg = document.getElementById('empty');
+      let currentFilter = 'all';
+
+      function matches(card, f) {
+        if (f === 'all') return true;
+        if (f === 'saved') return card.classList.contains('saved');
+        return card.dataset.cat === f;
+      }
+
+      function render() {
+        let shown = 0;
+        cards.forEach(c => {
+          const ok = matches(c, currentFilter);
+          c.hidden = !ok;
+          if (ok) shown++;
+        });
+        emptyMsg.hidden = shown > 0;
+        pills.forEach(p => {
+          p.classList.toggle('active', p.dataset.filter === currentFilter);
+          p.querySelector('.count').textContent = cards.filter(c => matches(c, p.dataset.filter)).length;
+        });
+      }
+
+      pills.forEach(p => p.addEventListener('click', () => {
+        currentFilter = p.dataset.filter;
         render();
+      }));
+
+      cards.forEach(card => {
+        card.querySelector('.heart').addEventListener('click', e => {
+          e.stopPropagation();
+          card.classList.toggle('saved');
+          render();
+        });
       });
-    });
 
-    document.querySelectorAll('.tasks li').forEach(li => {
-      li.addEventListener('click', () => li.classList.toggle('done'));
-    });
+      document.querySelectorAll('.tasks li').forEach(li => {
+        li.addEventListener('click', () => li.classList.toggle('done'));
+      });
 
-    lucide.createIcons();
-    render();
-
-    function logout() {
-      localStorage.clear();
-      window.location.href = 'index.html';
-    }
+      render();
+    })();
   </script>
 </body>
 </html>

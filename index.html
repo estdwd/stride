@@ -5,9 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#000000" />
   <title>Stride | Login</title>
+
+  <!-- Already logged in? Go straight to the app (runs before anything paints) -->
+  <script>
+    (function () {
+      var THIRTY = 30 * 24 * 60 * 60 * 1000;
+      function ok() {
+        try {
+          var u = JSON.parse(localStorage.getItem('stride_user'));
+          var t = Number(localStorage.getItem('stride_last_active'));
+          return !!(u && u.id && u.name && u.email && t && (Date.now() - t) < THIRTY);
+        } catch (e) { return false; }
+      }
+      function clearAuth() {
+        try {
+          localStorage.removeItem('stride_user');
+          localStorage.removeItem('stride_last_active');
+        } catch (e) {}
+      }
+      window.strideSessionOk = ok;
+      if (ok()) {
+        document.documentElement.style.visibility = 'hidden';
+        location.replace('app.html');
+      } else {
+        clearAuth(); // wipe expired or corrupted leftovers
+      }
+    })();
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
   <style>
@@ -18,6 +45,7 @@
     }
 
     :root {
+      --logo: #C9500F;
       --ink: #0b0b0b;
       --muted: #9a9a9a;
       --line: rgba(255, 255, 255, 0.16);
@@ -29,7 +57,7 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: 'Outfit', -apple-system, sans-serif;
+      font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
 
@@ -95,10 +123,41 @@
       background-size: 5px 5px;
     }
 
-    @media (prefers-reduced-motion: reduce) { .glow { animation: none; } }
+    /* ---------- INTRO ANIMATION (fade + swipe) ---------- */
+    .intro {
+      animation: swipeIn .75s cubic-bezier(.16, 1, .3, 1) backwards;
+      animation-delay: calc(var(--i, 0) * 80ms + 150ms);
+    }
+    @keyframes swipeIn {
+      from { opacity: 0; transform: translateX(44px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .wipe { animation: wipe 1s cubic-bezier(.16, 1, .3, 1) .25s backwards; }
+    @keyframes wipe {
+      from { opacity: 0; clip-path: inset(-10% 100% -10% -5%); transform: translateX(-18px); }
+      to   { opacity: 1; clip-path: inset(-10% -5% -10% -5%); transform: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .glow, .intro, .wipe, .logo { animation: none !important; }
+    }
+
+    /* ---------- BRAND ---------- */
+    .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 34px; }
+    .logo {
+      width: 37px; height: 46px; flex-shrink: 0;
+      color: var(--logo);
+      filter: drop-shadow(0 0 14px rgba(201, 80, 15, 0.6));
+      animation: logoGlow 4s ease-in-out infinite alternate;
+    }
+    @keyframes logoGlow {
+      from { filter: drop-shadow(0 0 8px rgba(201, 80, 15, 0.4)); }
+      to   { filter: drop-shadow(0 0 20px rgba(255, 110, 30, 0.75)); }
+    }
+    .brand span { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.03em; }
 
     /* ---------- HEADER ---------- */
-    .header { margin-bottom: 40px; animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+    .header { margin-bottom: 36px; }
     .header h1 {
       font-size: clamp(3.2rem, 17vw, 4.8rem);
       font-weight: 400; letter-spacing: -0.045em; line-height: 1; margin-bottom: 14px;
@@ -106,10 +165,7 @@
     .header p { color: var(--muted); font-size: 1.1rem; font-weight: 300; }
 
     /* ---------- FORM ---------- */
-    .form-container {
-      display: flex; flex-direction: column; gap: 12px;
-      animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
+    .form-container { display: flex; flex-direction: column; gap: 12px; }
 
     .input-group { position: relative; }
     .input-group label {
@@ -188,9 +244,7 @@
     .btn:not(:disabled):hover::before, .btn:not(:disabled):active::before {
       opacity: 1; animation: spin 1.5s linear infinite;
     }
-
     @keyframes spin { 100% { --angle: 360deg; } }
-    @keyframes slideUp { 0% { opacity: 0; transform: translateY(30px); } 100% { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
@@ -202,18 +256,25 @@
     <div class="glow g-deep"></div>
   </div>
 
+  <div class="brand intro" style="--i:0">
+    <svg class="logo" viewBox="0 0 2333 2916" fill="currentColor" fill-rule="evenodd" aria-hidden="true">
+      <path d="M488 0H2333V2187A218.5 218.5 0 0 0 2333 2624V2916H488A488 488 0 0 1 0 2428V488A488 488 0 0 1 488 0ZM510 2186H1869C1808 2300 1808 2510 1869 2624H510A219 219 0 0 1 510 2186ZM1109 396A60 60 0 0 1 1224 396L1346 795A60 60 0 0 0 1386 835L1785 957A60 60 0 0 1 1785 1072L1386 1194A60 60 0 0 0 1346 1234L1224 1633A60 60 0 0 1 1109 1633L987 1234A60 60 0 0 0 947 1194L548 1072A60 60 0 0 1 548 957L947 835A60 60 0 0 0 987 795Z"/>
+    </svg>
+    <span>Stride</span>
+  </div>
+
   <div class="header">
-    <h1>Welcome.</h1>
-    <p>Let's get you prepped for JAMB.</p>
+    <h1 class="wipe">Welcome.</h1>
+    <p class="intro" style="--i:2">Let's get you prepped for JAMB.</p>
   </div>
 
   <div class="form-container">
-    <div class="input-group">
+    <div class="input-group intro" style="--i:3">
       <input type="text" id="name" class="input-field" placeholder=" " value="John Doe" autocomplete="name">
       <label for="name">Full Name</label>
     </div>
 
-    <div class="row">
+    <div class="row intro" style="--i:4">
       <div class="input-group">
         <input type="number" id="age" class="input-field" placeholder=" " value="17">
         <label for="age">Age</label>
@@ -225,16 +286,16 @@
           <option value="Commerce">Commerce</option>
         </select>
         <label for="course">Course</label>
-        <i data-lucide="chevron-down" class="select-icon"></i>
+        <svg class="select-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
       </div>
     </div>
 
-    <div class="input-group">
+    <div class="input-group intro" style="--i:5">
       <input type="tel" id="phone" class="input-field" placeholder=" " autocomplete="tel">
       <label for="phone">Phone Number</label>
     </div>
 
-    <div class="input-group">
+    <div class="input-group intro" style="--i:6">
       <input type="email" id="email" class="input-field" placeholder=" " autocomplete="email">
       <label for="email">Email Address</label>
     </div>
@@ -251,15 +312,13 @@
 
     <p class="status" id="status" role="status" aria-live="polite"></p>
 
-    <button class="btn" id="action-btn">
+    <button class="btn intro" style="--i:7" id="action-btn">
       <span id="btn-label">Send Login Code</span>
-      <i data-lucide="arrow-right"></i>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
     </button>
   </div>
 
   <script>
-    lucide.createIcons();
-
     // ============ EMAILJS CONFIG ============
     const EMAILJS = {
       publicKey:  'FYOEPCwzLI-g_9c2C',
@@ -284,9 +343,27 @@
     let busy = false;
     let cooldownTimer = null;
 
-    if (window.emailjs) {
-      emailjs.init({ publicKey: EMAILJS.publicKey });
+    // --- Callbacks: already logged in ---
+    function goToAppIfLoggedIn() {
+      if (window.strideSessionOk && window.strideSessionOk()) location.replace('app.html');
     }
+    // Back/forward cache: page restored without reloading
+    window.addEventListener('pageshow', e => { if (e.persisted) goToAppIfLoggedIn(); });
+    // Logged in from another tab
+    window.addEventListener('storage', e => { if (e.key === 'stride_user') goToAppIfLoggedIn(); });
+
+    // --- Fallbacks ---
+    function storageWorks() {
+      try {
+        localStorage.setItem('__t', '1');
+        localStorage.removeItem('__t');
+        return true;
+      } catch (e) { return false; }
+    }
+
+    try {
+      if (window.emailjs) emailjs.init({ publicKey: EMAILJS.publicKey });
+    } catch (e) { console.error('EmailJS init failed', e); }
 
     function setStatus(msg, type) {
       statusEl.textContent = msg || '';
@@ -314,9 +391,9 @@
       return text; // fallback on non-secure pages
     }
 
-    const getPending = () => { try { return JSON.parse(sessionStorage.getItem(PENDING_KEY)); } catch { return null; } };
-    const savePending = p => sessionStorage.setItem(PENDING_KEY, JSON.stringify(p));
-    const clearPending = () => sessionStorage.removeItem(PENDING_KEY);
+    const getPending = () => { try { return JSON.parse(sessionStorage.getItem(PENDING_KEY)); } catch (e) { return null; } };
+    const savePending = p => { try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(p)); } catch (e) {} };
+    const clearPending = () => { try { sessionStorage.removeItem(PENDING_KEY); } catch (e) {} };
 
     // --- UI modes ---
     function setMode(next) {
@@ -359,12 +436,18 @@
       const name = $('name').value.trim();
       const email = emailInput.value.trim();
 
+      if (!storageWorks()) {
+        return setStatus('Your browser is blocking storage. Turn off private mode and try again.', 'err');
+      }
       if (!name) return setStatus('Please enter your full name.', 'err');
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         return setStatus('Please enter a valid email address.', 'err');
       }
+      if (!navigator.onLine) {
+        return setStatus("You're offline. Connect to the internet and try again.", 'err');
+      }
       if (!window.emailjs) {
-        return setStatus('Could not load the email service. Check your connection.', 'err');
+        return setStatus('Could not load the email service. Check your connection and refresh.', 'err');
       }
 
       const wasVerify = mode === 'verify';
@@ -447,10 +530,15 @@
         phone: $('phone').value,
       };
 
+      try {
+        localStorage.setItem('stride_user', JSON.stringify(user));
+        localStorage.setItem('stride_last_active', String(Date.now()));
+      } catch (e) {
+        return setStatus("Couldn't save your login. Turn off private mode and try again.", 'err');
+      }
+
       clearPending();
-      localStorage.setItem('stride_user', JSON.stringify(user));
-      localStorage.setItem('stride_last_active', Date.now());
-      window.location.href = 'app.html';
+      location.replace('app.html');
     }
 
     // --- events ---
