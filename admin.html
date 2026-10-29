@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Stride | Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      --logo: #C9500F; --bg: #020305; --ink: #0b0b0b; --muted: #9a9a9a;
+      --line: rgba(255, 255, 255, 0.16); --surface: rgba(16, 16, 16, 0.86); --surface-2: rgba(0, 0, 0, 0.55);
+      --orange: #EB7650; --yellow: #F8CB4A; --cream: #F6EDCB; --green: #97D86E; --blue: #8DB9EA; --red: #E8615A;
+      --r-card: 34px; --r-panel: 30px; --ease: cubic-bezier(.16, 1, .3, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    html { background: var(--bg); }
+    body { background: transparent; color: #fff; min-height: 100vh; padding: 26px 18px 160px; max-width: 600px; margin: 0 auto; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+    button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+    button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 12px; }
+    svg { width: 20px; height: 20px; }
+    [hidden] { display: none !important; }
+
+    /* Background */
+    .bg { position: fixed; inset: 0; z-index: -1; background: #020305; overflow: hidden; contain: strict; }
+    .glow { position: absolute; border-radius: 50%; pointer-events: none; }
+    .g-blue { width: 640px; height: 520px; left: -300px; top: -160px; background: radial-gradient(closest-side, rgba(24,120,170,0.55), rgba(10,60,95,0.22) 55%, rgba(0,0,0,0) 78%); animation: driftA 42s ease-in-out infinite alternate; }
+    .g-orange { width: 560px; height: 560px; right: -320px; top: 18%; background: radial-gradient(closest-side, rgba(255,110,30,0.5), rgba(190,60,10,0.18) 58%, rgba(0,0,0,0) 80%); animation: driftB 52s ease-in-out infinite alternate; }
+    .g-deep { width: 620px; height: 620px; left: -220px; bottom: -320px; background: radial-gradient(closest-side, rgba(255,105,28,0.42), rgba(160,50,8,0.14) 58%, rgba(0,0,0,0) 80%); animation: driftA 60s ease-in-out infinite alternate-reverse; }
+    @keyframes driftA { to { transform: translate3d(60px, 70px, 0) scale(1.08); } }
+    @keyframes driftB { to { transform: translate3d(-70px, 50px, 0) scale(1.06); } }
+    .bg::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 70% at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.62) 100%), rgba(0,0,0,0.32); }
+    .bg::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(circle at center, rgba(0,0,0,0) 0, rgba(0,0,0,0) 1px, rgba(0,0,0,0.8) 1.7px); background-size: 5px 5px; }
+
+    /* Access gate */
+    .gate { position: fixed; inset: 0; z-index: 900; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 30px; text-align: center; transition: opacity .4s ease; }
+    .gate.out { opacity: 0; pointer-events: none; }
+    .gate svg.lg { width: 52px; height: 65px; color: var(--logo); filter: drop-shadow(0 0 18px rgba(255,110,30,.55)); animation: pulse 1.6s ease-in-out infinite alternate; }
+    .gate.stop svg.lg { animation: none; }
+    @keyframes pulse { to { transform: scale(1.08); } }
+    .gate h2 { font-size: 1.6rem; font-weight: 500; letter-spacing: -0.02em; }
+    .gate p { color: var(--muted); font-size: .95rem; line-height: 1.5; max-width: 32ch; }
+
+    /* Pages */
+    .page { display: none; position: relative; width: 100%; }
+    .page.active { display: block; animation: pageIn .28s ease both; }
+    @keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    .page.in .stagger { animation: rise .5s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 55ms); }
+
+    /* Header */
+    .top-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; gap: 12px; }
+    .top-header h1 { font-size: clamp(2.4rem, 11vw, 3.2rem); font-weight: 400; letter-spacing: -0.045em; line-height: 1.02; }
+    .eyebrow { font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .head-btns { display: flex; gap: 8px; flex-shrink: 0; margin-top: 2px; }
+    .round-btn { width: 48px; height: 48px; border-radius: 50%; background: rgba(22,22,22,0.92); border: 1px solid rgba(255,255,255,0.08); display: grid; place-items: center; }
+    .round-btn.spin svg { animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Cards */
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 13px; }
+    .card { position: relative; color: var(--ink); border-radius: var(--r-card); overflow: hidden; cursor: pointer; }
+    .c-orange { background: var(--orange); } .c-yellow { background: var(--yellow); } .c-cream { background: var(--cream); } .c-green { background: var(--green); } .c-blue { background: var(--blue); }
+    .sc { padding: 18px 16px 16px 18px; min-height: 164px; display: flex; flex-direction: column; justify-content: space-between; }
+    .sc h3 { font-size: 1.08rem; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; }
+    .sc .sub { font-size: .76rem; opacity: .62; margin-top: 4px; }
+    .sc .ic { width: 38px; height: 38px; border-radius: 50%; background: rgba(0,0,0,0.1); display: grid; place-items: center; flex-shrink: 0; }
+    .sc .ic svg { width: 17px; height: 17px; }
+    .sc .big { font-size: 3.6rem; font-weight: 600; letter-spacing: -0.06em; line-height: .9; font-variant-numeric: tabular-nums; }
+    .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+
+    /* Panels */
+    .panel { background: var(--surface); border: 1px solid rgba(255,255,255,0.07); border-radius: var(--r-panel); padding: 24px 20px; margin-bottom: 13px; }
+    .panel h3 { font-size: 1.12rem; font-weight: 500; margin-bottom: 16px; letter-spacing: -0.01em; }
+    .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+    .panel-head h3 { margin-bottom: 0; }
+    .panel-head small { color: var(--muted); font-size: .8rem; }
+
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 13px; }
+    .stat { background: var(--surface); border: 1px solid rgba(255,255,255,0.07); border-radius: 26px; padding: 18px 16px; text-align: left; display: block; width: 100%; }
+    .stat .k { font-size: .76rem; color: var(--muted); margin-bottom: 8px; }
+    .stat .v { font-size: 1.9rem; font-weight: 500; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+    .stat .v small { font-size: .95rem; font-weight: 400; color: var(--muted); }
+
+    /* Charts */
+    .bars { display: flex; align-items: flex-end; gap: 6px; height: 132px; }
+    .bar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; min-width: 0; }
+    .bar i { display: block; width: 100%; border-radius: 8px 8px 4px 4px; background: linear-gradient(to top, rgba(235,118,80,.55), var(--orange)); height: 0; min-height: 4px; transition: height .9s var(--ease); }
+    .bar.zero i { background: rgba(255,255,255,0.08); }
+    .bar b { font-size: .68rem; font-weight: 500; color: #fff; font-variant-numeric: tabular-nums; height: 12px; }
+    .bar span { font-size: .64rem; color: var(--muted); }
+    .area { margin-bottom: 16px; }
+    .area:last-child { margin-bottom: 0; }
+    .area-top { display: flex; justify-content: space-between; gap: 10px; font-size: .9rem; margin-bottom: 8px; }
+    .area-top span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .area-top span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    .area-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.07); overflow: hidden; }
+    .area-bar > div { height: 100%; border-radius: 4px; width: 0; background: var(--orange); transition: width .9s var(--ease); }
+    .area-bar.good > div { background: var(--green); }
+    .area-bar.mid > div { background: var(--yellow); }
+    .area-bar.weak > div { background: var(--red); }
+    .empty { text-align: center; color: var(--muted); padding: 34px 16px; font-size: .95rem; line-height: 1.5; }
+
+    /* Inputs */
+    .field { width: 100%; padding: 16px 20px; border-radius: 999px; background: rgba(0,0,0,0.45); border: 1px solid var(--line); color: #fff; font-size: 1rem; outline: none; transition: border-color .2s, background .2s; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+    .field:focus { border-color: #fff; background: rgba(0,0,0,0.6); }
+    .field::placeholder { color: #707070; }
+    textarea.field { border-radius: 24px; resize: none; min-height: 96px; line-height: 1.45; }
+    .search { position: relative; margin-bottom: 14px; }
+    .search svg { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+    .search .field { padding-left: 48px; }
+    .stack { display: flex; flex-direction: column; gap: 10px; }
+
+    .filter-pills { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 14px; padding: 4px 18px 2px; -webkit-overflow-scrolling: touch; }
+    .filter-pills::-webkit-scrollbar { display: none; }
+    .pill { display: inline-flex; align-items: center; gap: 9px; height: 44px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: rgba(0,0,0,0.28); color: var(--muted); font-size: 1rem; white-space: nowrap; flex-shrink: 0; }
+    .pill .count { display: none; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,0.08); font-size: .74rem; line-height: 22px; text-align: center; color: #fff; font-variant-numeric: tabular-nums; }
+    .pill.active { color: #fff; border-color: #fff; background: rgba(255,255,255,0.06); }
+    .pill.active .count { display: inline-block; }
+
+    .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: rgba(0,0,0,0.42); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; padding: 5px; }
+    .seg.two { grid-template-columns: repeat(2, 1fr); border-radius: 26px; }
+    .seg.four { grid-template-columns: repeat(2, 1fr); border-radius: 26px; }
+    .seg button { padding: 11px 6px; border-radius: 999px; font-size: .9rem; color: var(--muted); }
+    .seg button.on { color: #000; background: #fff; font-weight: 500; }
+
+    .tool-row { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
+    .tool-row .seg { flex: 1; }
+    .tool-btn { height: 46px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: rgba(0,0,0,0.28); display: inline-flex; align-items: center; gap: 8px; font-size: .92rem; white-space: nowrap; }
+    .tool-btn svg { width: 17px; height: 17px; }
+
+    .btn { width: 100%; padding: 17px; border-radius: 999px; background: var(--orange); color: #1a0d06; font-size: 1.02rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 9px; }
+    .btn:disabled { opacity: .5; pointer-events: none; }
+    .btn svg { width: 19px; height: 19px; }
+
+    /* User rows */
+    .urow { display: flex; align-items: center; gap: 13px; width: 100%; padding: 12px 8px; margin: 0 -8px; width: calc(100% + 16px); border-radius: 22px; text-align: left; border-bottom: 0; }
+    .urow + .urow { margin-top: 2px; }
+    .av { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 1.1rem; font-weight: 600; color: var(--ink); flex-shrink: 0; text-transform: uppercase; }
+    .av.big { width: 64px; height: 64px; font-size: 1.7rem; }
+    .ub { flex: 1; min-width: 0; }
+    .ub b { display: block; font-weight: 500; font-size: .98rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ub small { display: block; color: var(--muted); font-size: .78rem; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tags { display: flex; gap: 5px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; max-width: 46%; }
+    .tag { font-style: normal; font-size: .66rem; font-weight: 600; letter-spacing: .02em; padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,0.1); color: #fff; white-space: nowrap; }
+    .t-admin { background: rgba(235,118,80,0.2); color: var(--orange); }
+    .t-prem { background: rgba(248,203,74,0.18); color: var(--yellow); }
+    .t-susp { background: rgba(232,97,90,0.18); color: var(--red); }
+    .t-new { background: rgba(151,216,110,0.16); color: var(--green); }
+    .more-btn { display: block; width: 100%; padding: 14px; margin-top: 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: .92rem; }
+
+    /* Detail sheet */
+    .u-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+    .u-head h3 { margin: 0 !important; font-size: 1.3rem !important; word-break: break-word; }
+    .u-head p { color: var(--muted) !important; font-size: .86rem !important; margin-top: 2px; word-break: break-all; }
+    .p-stats { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface-2); border: 1px solid rgba(255,255,255,0.07); border-radius: 24px; padding: 14px 6px; margin: 14px 0; }
+    .p-stats div { text-align: center; }
+    .p-stats div + div { border-left: 1px solid rgba(255,255,255,0.07); }
+    .p-stats .v { font-size: 1.3rem; font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #fff; }
+    .p-stats .k { font-size: .72rem; color: var(--muted); margin-top: 4px; }
+    .info { background: var(--surface-2); border-radius: 22px; padding: 16px; border: 1px solid rgba(255,255,255,0.07); margin-bottom: 8px; }
+    .info .line { display: flex; justify-content: space-between; gap: 12px; font-size: .88rem; color: #fff; }
+    .info .line + .line { margin-top: 12px; }
+    .info .line span:first-child { color: var(--muted); flex-shrink: 0; }
+    .info .line span:last-child { text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .menu { display: flex; flex-direction: column; }
+    .menu-item { display: flex; align-items: center; gap: 14px; width: 100%; padding: 13px 6px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); border-radius: 14px; }
+    .menu-item:last-child { border-bottom: 0; }
+    .menu-ic { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.06); display: grid; place-items: center; flex-shrink: 0; }
+    .menu-ic svg { width: 18px; height: 18px; }
+    .menu-body { flex: 1; min-width: 0; }
+    .menu-body h4 { font-size: .95rem; font-weight: 400; }
+    .menu-body p { font-size: .76rem; color: var(--muted); margin-top: 2px; }
+    .menu-item.danger .menu-ic { color: var(--red); background: rgba(232,97,90,0.12); }
+    .menu-item.danger h4 { color: var(--red); }
+    .menu-item.good .menu-ic { color: var(--green); background: rgba(151,216,110,0.12); }
+    .menu-item.gold .menu-ic { color: var(--yellow); background: rgba(248,203,74,0.12); }
+    .menu-item.locked { opacity: .4; pointer-events: none; }
+    .chev { color: #555; flex-shrink: 0; }
+    .chev svg { width: 18px; height: 18px; }
+
+    .test-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .test-item:last-child { border-bottom: 0; }
+    .test-icon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-size: .82rem; font-weight: 600; background: rgba(255,255,255,0.08); font-variant-numeric: tabular-nums; }
+    .test-icon.hi { background: rgba(151,216,110,0.16); color: var(--green); }
+    .test-icon.mid { background: rgba(248,203,74,0.16); color: var(--yellow); }
+    .test-icon.lo { background: rgba(232,97,90,0.16); color: var(--red); }
+    .test-body { flex: 1; min-width: 0; }
+    .test-body h4 { font-size: .94rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .test-body p { font-size: .76rem; color: var(--muted); margin-top: 2px; }
+
+    /* Announcements + logs */
+    .ann { padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .ann:first-child { padding-top: 0; }
+    .ann:last-child { border-bottom: 0; padding-bottom: 0; }
+    .ann-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .ann h4 { font-size: 1rem; font-weight: 500; }
+    .ann p { color: #b4b4b4; font-size: .86rem; line-height: 1.5; margin: 6px 0 12px; word-break: break-word; }
+    .ann-actions { display: flex; gap: 8px; }
+    .mini { height: 38px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); font-size: .84rem; display: inline-flex; align-items: center; gap: 6px; }
+    .mini svg { width: 15px; height: 15px; }
+    .mini.live { border-color: rgba(151,216,110,.5); color: var(--green); }
+    .mini.del { color: var(--red); border-color: rgba(232,97,90,.3); }
+    .log { display: flex; gap: 12px; padding: 13px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .log:last-child { border-bottom: 0; padding-bottom: 0; }
+    .log:first-child { padding-top: 0; }
+    .log .menu-ic { width: 38px; height: 38px; }
+    .log h4 { font-size: .92rem; font-weight: 400; line-height: 1.35; word-break: break-word; }
+    .log h4 b { font-weight: 500; }
+    .log p { color: var(--muted); font-size: .76rem; margin-top: 3px; word-break: break-word; }
+
+    /* Dock */
+    .dock { position: fixed; left: 0; right: 0; bottom: 0; padding: 40px 0 20px; display: flex; justify-content: center; background: linear-gradient(to top, rgba(0,0,0,0.92) 22%, rgba(0,0,0,0)); z-index: 100; pointer-events: none; }
+    .dock-inner { pointer-events: auto; display: flex; align-items: center; gap: 2px; padding: 6px; border-radius: 999px; background: rgba(26,26,26,0.97); border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 12px 34px rgba(0,0,0,0.7); }
+    .nav-item { position: relative; width: 50px; height: 50px; border-radius: 999px; display: grid; place-items: center; color: #7d7d7d; }
+    .nav-item.active { color: #fff; background: rgba(255,255,255,0.12); }
+    .nav-item svg { width: 21px; height: 21px; }
+    .no-icons .nav-item::after { content: attr(aria-label); font-size: .62rem; }
+
+    /* Payments */
+    .lbl { display: block; font-size: .78rem; color: var(--muted); margin: 4px 0 -2px 8px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .seg.four-up { grid-template-columns: repeat(4, 1fr); }
+    .seg.four-up button { font-size: .82rem; padding: 11px 2px; }
+    .nav-badge { position: absolute; top: 3px; right: 5px; min-width: 17px; height: 17px; padding: 0 5px; border-radius: 9px; background: var(--orange); color: #1a0d06; font-size: .64rem; font-weight: 700; font-style: normal; display: grid; place-items: center; }
+    .pay-item { padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .pay-item:first-child { padding-top: 2px; }
+    .pay-item:last-child { border-bottom: 0; padding-bottom: 2px; }
+    .pay-top { display: flex; align-items: center; gap: 12px; }
+    .pay-mid { display: flex; gap: 14px; margin-top: 14px; }
+    .rcpt { width: 92px; height: 124px; border-radius: 18px; overflow: hidden; flex-shrink: 0; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); display: grid; place-items: center; color: var(--muted); font-size: .72rem; text-align: center; padding: 0; transition: transform .35s var(--ease); }
+    .rcpt img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    button.rcpt:active { transform: scale(.95); }
+    .pay-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 9px; justify-content: center; }
+    .pay-info .line { display: flex; justify-content: space-between; gap: 10px; font-size: .86rem; }
+    .pay-info .line span:first-child { color: var(--muted); }
+    .pay-info .line span:last-child { text-align: right; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    .pay-note { margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: rgba(0,0,0,0.35); color: #b4b4b4; font-size: .84rem; line-height: 1.45; }
+    .pay-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .mini.ok { background: var(--orange); border-color: var(--orange); color: #1a0d06; font-weight: 600; }
+    .rcpt-full { width: 100%; border-radius: 20px; display: block; margin-top: 6px; }
+
+    /* Modal + toast */
+    .modal { position: fixed; inset: 0; z-index: 500; display: grid; place-items: end center; }
+    .modal-back { position: absolute; inset: 0; background: rgba(0,0,0,0.72); animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-card { position: relative; width: 100%; max-width: 600px; max-height: 92vh; overflow-y: auto; overscroll-behavior: contain; background: #141414; border: 1px solid rgba(255,255,255,0.09); border-radius: 30px 30px 0 0; padding: 26px 20px calc(26px + env(safe-area-inset-bottom, 0px)); animation: sheetUp .36s var(--ease); }
+    @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-card > h3 { font-size: 1.24rem; font-weight: 500; margin-bottom: 10px; }
+    .modal-card p.txt { font-size: .92rem; color: #b4b4b4; line-height: 1.55; }
+    .modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 22px; }
+    .m-btn { width: 100%; padding: 16px; border-radius: 999px; font-size: .98rem; font-weight: 500; background: rgba(255,255,255,0.08); }
+    .m-btn.primary { background: #fff; color: #000; }
+    .m-btn.danger { background: rgba(232,97,90,0.14); color: var(--red); border: 1px solid rgba(232,97,90,0.3); }
+    .m-btn.ghost { background: transparent; color: var(--muted); }
+    .m-btn:disabled { opacity: .5; pointer-events: none; }
+    .toast { position: fixed; left: 50%; bottom: 118px; transform: translate(-50%, 20px); background: #fff; color: #000; padding: 13px 22px; border-radius: 999px; font-size: .9rem; font-weight: 500; z-index: 600; opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .3s var(--ease); max-width: calc(100vw - 40px); text-align: center; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.err { background: var(--red); color: #fff; }
+
+    /* ---------- Hover & click motion ---------- */
+    .card { transition: transform .45s var(--ease), box-shadow .45s var(--ease), filter .3s ease; }
+    .sc .ic { transition: transform .45s var(--ease); }
+    .round-btn { transition: transform .35s var(--ease), border-color .2s; }
+    .pill { transition: color .2s, border-color .2s, background .2s, transform .35s var(--ease); }
+    .seg button { transition: color .18s, background .18s, transform .3s var(--ease); }
+    .tool-btn, .mini, .more-btn { transition: transform .35s var(--ease), border-color .2s, color .2s, background .2s; }
+    .btn { transition: transform .4s var(--ease), box-shadow .4s var(--ease), opacity .2s; }
+    .btn svg { transition: transform .4s var(--ease); }
+    .m-btn { transition: transform .3s var(--ease), background .2s, opacity .2s; }
+    .urow, .menu-item { transition: transform .35s var(--ease), background .2s, opacity .2s; }
+    .stat { transition: transform .4s var(--ease), border-color .25s, background .25s; }
+    .nav-item { transition: color .2s, background .2s, transform .35s var(--ease); }
+    .field { transition: border-color .2s, background .2s, transform .35s var(--ease); }
+
+    @media (hover: hover) and (pointer: fine) {
+      .card:hover { transform: translateY(-5px) scale(1.012); box-shadow: 0 22px 38px -14px rgba(0,0,0,0.65); filter: brightness(1.04); }
+      .card:hover .ic { transform: rotate(-10deg) scale(1.12); }
+      .round-btn:hover { transform: scale(1.08); border-color: rgba(255,255,255,0.28); }
+      .pill:not(.active):hover { color: #fff; border-color: rgba(255,255,255,0.5); transform: translateY(-2px); }
+      .seg button:not(.on):hover { color: #fff; background: rgba(255,255,255,0.07); }
+      .tool-btn:hover, .more-btn:hover, .mini:hover { border-color: rgba(255,255,255,0.5); color: #fff; transform: translateY(-2px); }
+      .btn:hover { transform: translateY(-3px); box-shadow: 0 16px 34px -10px rgba(235,118,80,0.6); }
+      .btn:hover svg { transform: translateX(4px) scale(1.1); }
+      .m-btn:hover { background: rgba(255,255,255,0.14); transform: translateY(-2px); }
+      .m-btn.primary:hover { background: #ececec; }
+      .urow:hover { background: rgba(255,255,255,0.05); transform: translateX(4px); }
+      .menu-item:hover { background: rgba(255,255,255,0.04); transform: translateX(4px); }
+      .stat:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.18); background: rgba(24,24,24,0.9); }
+      .nav-item:not(.active):hover { color: #fff; background: rgba(255,255,255,0.07); transform: translateY(-2px); }
+      .field:hover:not(:focus) { border-color: rgba(255,255,255,0.38); }
+    }
+    .card:active { transform: scale(0.965); filter: brightness(0.97); transition-duration: .12s; }
+    .round-btn:active { transform: scale(0.88); }
+    .pill:active { transform: scale(0.93); }
+    .seg button:active { transform: scale(0.94); }
+    .tool-btn:active, .mini:active, .more-btn:active { transform: scale(0.95); }
+    .btn:active { transform: scale(0.96); box-shadow: none; transition-duration: .1s; }
+    .m-btn:active { transform: scale(0.97); }
+    .urow:active { transform: scale(0.98); background: rgba(255,255,255,0.08); }
+    .menu-item:active { transform: scale(0.98); opacity: .8; }
+    .stat:active { transform: scale(0.97); }
+    .nav-item:active { transform: scale(0.86); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+      .glow { animation: none; }
+    }
+    @media (max-width: 360px) { .sc .big { font-size: 3rem; } .tags { max-width: 40%; } }
+  </style>
+</head>
+<body>
+
+  <!-- Access gate -->
+  <div class="gate" id="gate">
+    <svg class="lg" viewBox="0 0 2333 2916" fill="currentColor" fill-rule="evenodd" aria-hidden="true">
+      <path d="M488 0H2333V2187A218.5 218.5 0 0 0 2333 2624V2916H488A488 488 0 0 1 0 2428V488A488 488 0 0 1 488 0ZM510 2186H1869C1808 2300 1808 2510 1869 2624H510A219 219 0 0 1 510 2186ZM1109 396A60 60 0 0 1 1224 396L1346 795A60 60 0 0 0 1386 835L1785 957A60 60 0 0 1 1785 1072L1386 1194A60 60 0 0 0 1346 1234L1224 1633A60 60 0 0 1 1109 1633L987 1234A60 60 0 0 0 947 1194L548 1072A60 60 0 0 1 548 957L947 835A60 60 0 0 0 987 795Z"/>
+    </svg>
+    <h2 id="gate-title">Checking access</h2>
+    <p id="gate-text">Hold on a second.</p>
+    <button class="m-btn primary" id="gate-btn" style="max-width:260px" hidden>Back to app</button>
+  </div>
+
+  <div class="bg" aria-hidden="true">
+    <div class="glow g-blue"></div><div class="glow g-orange"></div><div class="glow g-deep"></div>
+  </div>
+
+  <main id="app" hidden>
+    <header class="top-header">
+      <div style="min-width:0">
+        <p class="eyebrow">Stride admin</p>
+        <h1 id="page-title">Overview</h1>
+      </div>
+      <div class="head-btns">
+        <button class="round-btn" id="refresh-btn" aria-label="Refresh"><i data-lucide="refresh-cw"></i></button>
+        <button class="round-btn" id="exit-btn" aria-label="Back to app"><i data-lucide="log-out"></i></button>
+      </div>
+    </header>
+
+    <!-- OVERVIEW -->
+    <section id="overview" class="page active">
+      <div id="ov-body"></div>
+    </section>
+
+    <!-- USERS -->
+    <section id="users" class="page">
+      <div class="search">
+        <i data-lucide="search"></i>
+        <input class="field" id="user-search" type="search" placeholder="Search name, email, school or ID" autocomplete="off" />
+      </div>
+      <div class="filter-pills" id="user-pills"></div>
+      <div class="tool-row">
+        <div class="seg" id="sort-seg">
+          <button data-sort="new" class="on">Newest</button>
+          <button data-sort="active">Active</button>
+          <button data-sort="tests">Tests</button>
+        </div>
+        <button class="tool-btn" id="export-btn"><i data-lucide="download"></i>CSV</button>
+      </div>
+      <div class="panel" style="padding:18px 16px">
+        <div id="user-list"></div>
+      </div>
+    </section>
+
+    <!-- ADMINS -->
+    <section id="admins" class="page">
+      <div class="panel">
+        <h3>Add an admin</h3>
+        <div class="stack">
+          <input class="field" id="admin-email" type="email" placeholder="Email of an existing account" autocomplete="off" />
+          <button class="btn" id="admin-add-btn"><i data-lucide="shield-plus"></i> Make admin</button>
+        </div>
+      </div>
+      <div class="panel" style="padding:18px 16px">
+        <div class="panel-head" style="padding:0 6px"><h3>Current admins</h3><small id="admin-count"></small></div>
+        <div id="admin-list"></div>
+      </div>
+    </section>
+
+    <!-- PAYMENTS -->
+    <section id="payments" class="page">
+      <div class="seg four-up" id="pay-filter">
+        <button data-f="pending" class="on">Pending</button>
+        <button data-f="approved">Approved</button>
+        <button data-f="rejected">Rejected</button>
+        <button data-f="all">All</button>
+      </div>
+      <div class="panel" style="padding:18px 16px;margin-top:14px"><div id="pay-list"></div></div>
+      <div class="panel">
+        <h3>Payment settings</h3>
+        <div class="stack">
+          <div class="two-col">
+            <div class="stack"><label class="lbl" for="set-price">Price (₦)</label><input class="field" id="set-price" inputmode="numeric" /></div>
+            <div class="stack"><label class="lbl" for="set-premium_days">Premium days</label><input class="field" id="set-premium_days" inputmode="numeric" /></div>
+          </div>
+          <label class="lbl" for="set-trial_days">Free trial days</label>
+          <input class="field" id="set-trial_days" inputmode="numeric" />
+          <label class="lbl" for="set-bank_name">Bank</label>
+          <input class="field" id="set-bank_name" />
+          <label class="lbl" for="set-account_number">Account number</label>
+          <input class="field" id="set-account_number" inputmode="numeric" />
+          <label class="lbl" for="set-account_name">Account name (shown to students)</label>
+          <input class="field" id="set-account_name" />
+          <button class="btn" id="set-save"><i data-lucide="save"></i> Save settings</button>
+          <button class="m-btn" id="cleanup-btn">Clean up old data</button>
+          <p class="txt" style="font-size:.78rem;color:var(--muted);line-height:1.5;padding:0 6px">Receipts are deleted 30 days after you approve or reject them. Expired announcements and logs older than 90 days are removed too. This runs automatically each time you open the console.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ANNOUNCEMENTS -->
+    <section id="announce" class="page">
+      <div class="panel">
+        <h3>New announcement</h3>
+        <div class="stack">
+          <input class="field" id="ann-title" type="text" maxlength="80" placeholder="Title" />
+          <textarea class="field" id="ann-body" maxlength="400" placeholder="Message students will see when they open the app"></textarea>
+          <div class="seg" id="ann-kind">
+            <button data-kind="info" class="on">Info</button>
+            <button data-kind="update">Update</button>
+            <button data-kind="warning">Warning</button>
+          </div>
+          <label class="lbl" style="margin-top:2px">Show for</label>
+          <div class="seg" id="ann-life">
+            <button data-days="1">1 day</button>
+            <button data-days="3">3 days</button>
+            <button data-days="7" class="on">7 days</button>
+            <button data-days="30">30 days</button>
+            <button data-days="0">No expiry</button>
+          </div>
+          <button class="btn" id="ann-send"><i data-lucide="megaphone"></i> Publish</button>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Published</h3><small id="ann-count"></small></div>
+        <div id="ann-list"></div>
+      </div>
+    </section>
+
+    <!-- ACTIVITY -->
+    <section id="logs" class="page">
+      <div class="panel">
+        <div class="panel-head"><h3>Admin activity</h3><small>last 100</small></div>
+        <div id="log-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Dock -->
+  <nav class="dock" id="dock" hidden>
+    <div class="dock-inner">
+      <button class="nav-item active" data-target="overview" aria-label="Overview"><i data-lucide="layout-dashboard"></i></button>
+      <button class="nav-item" data-target="users" aria-label="Users"><i data-lucide="users"></i></button>
+      <button class="nav-item" data-target="payments" aria-label="Payments"><i data-lucide="wallet"></i><i class="nav-badge" id="pay-badge" hidden></i></button>
+      <button class="nav-item" data-target="admins" aria-label="Admins"><i data-lucide="shield-check"></i></button>
+      <button class="nav-item" data-target="announce" aria-label="Announcements"><i data-lucide="megaphone"></i></button>
+      <button class="nav-item" data-target="logs" aria-label="Activity"><i data-lucide="scroll-text"></i></button>
+    </div>
+  </nav>
+
+  <div class="modal" id="modal" hidden>
+    <div class="modal-back" data-close></div>
+    <div class="modal-card">
+      <h3 id="m-title"></h3>
+      <div id="m-body"></div>
+      <div class="modal-actions" id="m-actions"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    const SUPABASE_URL = 'https://kbbrovopcmywahcljudn.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_ommhdvmUlMnRJmvgCGduFQ_T85Ix9m7';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const $ = (s, r = document) => r.querySelector(s);
+    const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const fmtN = n => Number(n || 0).toLocaleString();
+    const DAY = 86400000;
+
+    if (!window.lucide) document.documentElement.classList.add('no-icons');
+    function icons() { try { if (window.lucide) lucide.createIcons(); } catch (e) {} }
+
+    let me = null;
+    let users = [];
+    let stats = null;
+    const ui = { filter: 'all', q: '', sort: 'new', shown: 40, annKind: 'info' };
+
+    /* ---------- helpers ---------- */
+    const isSusp = u => u.status === 'suspended' && (!u.suspended_until || new Date(u.suspended_until) > new Date());
+    const isPrem = u => u.plan === 'premium' && (!u.plan_expires_at || new Date(u.plan_expires_at) > new Date());
+    const isAdm = u => u.role === 'admin';
+    const isNew = u => Date.now() - new Date(u.created_at).getTime() < 7 * DAY;
+    const isDormant = u => !u.last_sign_in_at || Date.now() - new Date(u.last_sign_in_at).getTime() > 30 * DAY;
+    const dname = u => u.name || (u.email || '').split('@')[0] || 'Unnamed';
+    const initial = u => (dname(u).trim().charAt(0) || '?');
+    const PAL = ['#EB7650', '#F8CB4A', '#F6EDCB', '#97D86E', '#8DB9EA'];
+    const avColor = u => PAL[(dname(u).charCodeAt(0) || 0) % PAL.length];
+    const fmtDate = d => d ? new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+    function ago(d) {
+      if (!d) return 'never';
+      const s = Math.max(0, (Date.now() - new Date(d).getTime()) / 1000);
+      if (s < 60) return 'just now';
+      if (s < 3600) return Math.floor(s / 60) + 'm ago';
+      if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+      if (s < 86400 * 30) return Math.floor(s / 86400) + 'd ago';
+      return fmtDate(d);
+    }
+    const untilTxt = d => d ? fmtDate(d) : 'until lifted';
+
+    /* ---------- toast + modal ---------- */
+    const toastEl = $('#toast'); let toastTimer;
+    function toast(msg, isErr) {
+      toastEl.textContent = msg;
+      toastEl.classList.toggle('err', !!isErr);
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), isErr ? 3600 : 2300);
+    }
+    function fail(e) {
+      console.error(e);
+      const m = (e && e.message) || String(e);
+      toast(/could not find the function|schema cache|does not exist/i.test(m) ? 'Run admin-setup.sql in Supabase first.' : m, true);
+    }
+
+    const modalEl = $('#modal');
+    function openModal(o) {
+      $('#m-title').textContent = o.title || '';
+      $('#m-body').innerHTML = o.body || '';
+      const wrap = $('#m-actions');
+      wrap.innerHTML = '';
+      (o.actions || []).forEach(a => {
+        const b = document.createElement('button');
+        b.className = 'm-btn ' + (a.style || '');
+        b.textContent = a.label;
+        b.addEventListener('click', async () => {
+          b.disabled = true;
+          let keep = false;
+          try { keep = (a.onClick ? await a.onClick() : undefined) === false; } catch (e) { fail(e); keep = true; }
+          if (keep) b.disabled = false; else closeModal();
+        });
+        wrap.appendChild(b);
+      });
+      modalEl.hidden = false;
+      $('.modal-card', modalEl).scrollTop = 0;
+      icons();
+      return $('#m-body');
+    }
+    function closeModal() { modalEl.hidden = true; }
+    modalEl.addEventListener('click', e => { if (e.target.matches('[data-close]')) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modalEl.hidden) closeModal(); });
+
+    /* ---------- data ---------- */
+    async function rpc(name, args) {
+      const { data, error } = await sb.rpc(name, args || {});
+      if (error) throw error;
+      return data;
+    }
+    async function loadUsers() { users = (await rpc('admin_list_users')) || []; }
+    async function loadStats() { stats = await rpc('admin_stats'); }
+    async function reloadCore() {
+      const btn = $('#refresh-btn');
+      btn.classList.add('spin');
+      try { await Promise.all([loadUsers(), loadStats()]); renderAll(); }
+      catch (e) { fail(e); }
+      finally { btn.classList.remove('spin'); }
+    }
+
+    /* ---------- overview ---------- */
+    function statCard(cls, label, sub, val, icon, go) {
+      return `<article class="card sc ${cls}" data-go="${go}">
+        <div class="card-head"><div><h3>${label}</h3><p class="sub">${sub}</p></div><span class="ic"><i data-lucide="${icon}"></i></span></div>
+        <div class="big">${fmtN(val)}</div></article>`;
+    }
+    function bars(list, key, cls) {
+      if (!list.length) return '<p class="empty">Nothing here yet.</p>';
+      const max = Math.max(...list.map(x => x.n), 1);
+      return list.map(x => {
+        const label = key === 'subject' ? `${esc(x.k)}` : esc(x.k);
+        const right = key === 'subject' ? `${fmtN(x.n)} tests · ${x.avg == null ? 0 : x.avg}%` : fmtN(x.n);
+        const tone = key === 'subject' ? (x.avg >= 70 ? 'good' : x.avg >= 50 ? 'mid' : 'weak') : cls;
+        const pct = key === 'subject' ? (x.avg || 0) : Math.round(x.n / max * 100);
+        return `<div class="area"><div class="area-top"><span>${label}</span><span>${right}</span></div><div class="area-bar ${tone}"><div data-w="${pct}"></div></div></div>`;
+      }).join('');
+    }
+    function renderOverview() {
+      const root = $('#ov-body');
+      if (!stats) { root.innerHTML = '<p class="empty">No data yet.</p>'; return; }
+      const s = stats;
+      const days = s.signups || [];
+      const maxN = Math.max(...days.map(d => d.n), 1);
+      const chart = days.map(d => {
+        const letter = new Date(d.d + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'narrow' });
+        return `<div class="bar ${d.n ? '' : 'zero'}" title="${esc(d.d)}: ${d.n}"><b>${d.n || ''}</b><i data-h="${Math.max(4, Math.round(d.n / maxN * 100))}"></i><span>${letter}</span></div>`;
+      }).join('');
+      root.innerHTML = `
+        <div class="grid">
+          ${statCard('c-orange', 'All users', `${fmtN(s.new_today)} joined today`, s.total_users, 'users', 'all')}
+          ${statCard('c-green', 'Active', 'signed in this week', s.active_7d, 'activity', 'active')}
+          ${statCard('c-blue', 'New', 'joined this week', s.new_7d, 'user-plus', 'new')}
+          ${statCard('c-yellow', 'Premium', 'paid subscribers', s.premium, 'crown', 'premium')}
+        </div>
+        <div class="stat-grid">
+          <button class="stat" data-go="suspended"><div class="k">Suspended</div><div class="v">${fmtN(s.suspended)}</div></button>
+          <button class="stat" data-go="admin"><div class="k">Admins</div><div class="v">${fmtN(s.admins)}</div></button>
+          <div class="stat"><div class="k">Tests taken</div><div class="v">${fmtN(s.tests_total)}</div></div>
+          <div class="stat"><div class="k">Average score</div><div class="v">${s.avg_score || 0}<small>%</small></div></div>
+          <div class="stat"><div class="k">Questions answered</div><div class="v">${fmtN(s.questions)}</div></div>
+          <div class="stat"><div class="k">Tests this week</div><div class="v">${fmtN(s.tests_7d)}</div></div>
+          <button class="stat" data-tab="payments"><div class="k">Pending payments</div><div class="v">${fmtN(s.pending_payments)}</div></button>
+          <div class="stat"><div class="k">Revenue · 30 days</div><div class="v">${naira(s.revenue_30d)}</div><div class="k" style="margin:8px 0 0">${naira(s.revenue_total)} all time</div></div>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>Sign-ups</h3><small>last 14 days</small></div><div class="bars">${chart}</div></div>
+        <div class="panel"><div class="panel-head"><h3>Courses</h3><small>students per course</small></div>${bars(s.courses || [], 'course', '')}</div>
+        <div class="panel"><div class="panel-head"><h3>Top schools</h3><small>first choice</small></div>${bars(s.schools || [], 'school', '')}</div>
+        <div class="panel"><div class="panel-head"><h3>Subjects</h3><small>average score</small></div>${bars(s.subjects || [], 'subject', '')}</div>`;
+      icons();
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        $$('[data-w]', root).forEach(el => el.style.width = el.dataset.w + '%');
+        $$('[data-h]', root).forEach(el => el.style.height = el.dataset.h + '%');
+      }));
+      $$('[data-tab]', root).forEach(el => el.addEventListener('click', () => goTo(el.dataset.tab)));
+      $$('[data-go]', root).forEach(el => el.addEventListener('click', () => {
+        ui.filter = el.dataset.go; ui.q = ''; $('#user-search').value = '';
+        goTo('users');
+      }));
+    }
+
+    /* ---------- users ---------- */
+    const FILTERS = [
+      ['all', 'All', () => true],
+      ['active', 'Active', u => u.last_sign_in_at && Date.now() - new Date(u.last_sign_in_at).getTime() < 7 * DAY],
+      ['new', 'New', isNew],
+      ['premium', 'Premium', isPrem],
+      ['suspended', 'Suspended', isSusp],
+      ['admin', 'Admins', isAdm],
+      ['dormant', 'Dormant', isDormant],
+      ['nosetup', 'No setup', u => !u.has_profile]
+    ];
+    function filteredUsers() {
+      const f = FILTERS.find(x => x[0] === ui.filter) || FILTERS[0];
+      const q = ui.q.trim().toLowerCase();
+      let list = users.filter(f[2]);
+      if (q) list = list.filter(u => [u.name, u.email, u.school, u.course, u.id].some(v => v && String(v).toLowerCase().includes(q)));
+      const t = x => x ? new Date(x).getTime() : 0;
+      if (ui.sort === 'active') list.sort((a, b) => t(b.last_sign_in_at) - t(a.last_sign_in_at));
+      else if (ui.sort === 'tests') list.sort((a, b) => b.tests_count - a.tests_count);
+      else list.sort((a, b) => t(b.created_at) - t(a.created_at));
+      return list;
+    }
+    function tagsFor(u) {
+      let h = '';
+      if (u.is_super) h += '<em class="tag t-admin">Owner</em>';
+      else if (isAdm(u)) h += '<em class="tag t-admin">Admin</em>';
+      if (isPrem(u)) h += '<em class="tag t-prem">Premium</em>';
+      if (isSusp(u)) h += '<em class="tag t-susp">Suspended</em>';
+      if (!u.has_profile) h += '<em class="tag">No setup</em>';
+      else if (isNew(u) && !h) h += '<em class="tag t-new">New</em>';
+      return h;
+    }
+    function rowHtml(u) {
+      return `<button class="urow" data-id="${esc(u.id)}">
+        <span class="av" style="background:${avColor(u)}">${esc(initial(u))}</span>
+        <span class="ub"><b>${esc(dname(u))}</b><small>${esc(u.email)}</small></span>
+        <span class="tags">${tagsFor(u)}</span></button>`;
+    }
+    function bindRows(root) { $$('.urow', root).forEach(r => r.addEventListener('click', () => openUser(r.dataset.id))); }
+
+    function renderUsers() {
+      $('#user-pills').innerHTML = FILTERS.map(f => {
+        const n = users.filter(f[2]).length;
+        return `<button class="pill ${ui.filter === f[0] ? 'active' : ''}" data-f="${f[0]}">${f[1]} <span class="count">${n}</span></button>`;
+      }).join('');
+      $$('#user-pills .pill').forEach(b => b.addEventListener('click', () => { ui.filter = b.dataset.f; ui.shown = 40; renderUsers(); }));
+      $$('#sort-seg button').forEach(b => b.classList.toggle('on', b.dataset.sort === ui.sort));
+
+      const list = filteredUsers();
+      const root = $('#user-list');
+      if (!list.length) { root.innerHTML = '<p class="empty">No accounts match.</p>'; return; }
+      const shown = list.slice(0, ui.shown);
+      root.innerHTML = shown.map(rowHtml).join('') +
+        (list.length > shown.length ? `<button class="more-btn" id="more-users">Show more (${list.length - shown.length} left)</button>` : '');
+      bindRows(root);
+      const more = $('#more-users');
+      if (more) more.addEventListener('click', () => { ui.shown += 40; renderUsers(); });
+    }
+
+    function exportCsv() {
+      const safe = v => { let s = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+      const rows = [['Name', 'Email', 'Course', 'School', 'Target', 'Daily study', 'Role', 'Plan', 'Suspended', 'Joined', 'Last sign-in', 'Tests', 'Avg %']]
+        .concat(filteredUsers().map(u => [u.name, u.email, u.course, u.school, u.target_score, u.study_hours, u.role, isPrem(u) ? 'premium' : 'free', isSusp(u) ? 'yes' : 'no', u.created_at, u.last_sign_in_at, u.tests_count, u.avg_pct]));
+      const csv = rows.map(r => r.map(safe).join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = 'stride-users.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      toast(`Exported ${rows.length - 1} accounts`);
+    }
+
+    /* ---------- user sheet ---------- */
+    function menuItem(act, icon, title, sub, cls) {
+      return `<button class="menu-item ${cls || ''}" data-act="${act}"><span class="menu-ic"><i data-lucide="${icon}"></i></span><span class="menu-body"><h4>${title}</h4><p>${sub}</p></span><span class="chev"><i data-lucide="chevron-right"></i></span></button>`;
+    }
+    async function afterAction(id, msg) {
+      toast(msg);
+      try { await Promise.all([loadUsers(), loadStats()]); } catch (e) { fail(e); }
+      renderAll();
+      if (users.find(u => u.id === id)) openUser(id);
+    }
+    async function copy(text, label) {
+      try { await navigator.clipboard.writeText(text); toast(label + ' copied'); }
+      catch (e) { toast('Copy failed', true); }
+    }
+
+    function openUser(id) {
+      const u = users.find(x => x.id === id);
+      if (!u) return;
+      const self = u.id === me.id;
+      const adm = isAdm(u);
+      const noProfile = !u.has_profile;
+      const owner = !!u.is_super;
+      const lockedAdm = (adm && !self) || owner; // other admins: remove admin first; owner is always protected
+      const susp = isSusp(u), prem = isPrem(u);
+
+      const lines = [
+        ['Course', u.course || '—'],
+        ['School', u.school || '—'],
+        ['Target score', u.target_score ? u.target_score + '+' : '—'],
+        ['Daily study', u.study_hours || '—'],
+        ['Plan', prem ? 'Premium · ' + (u.plan_expires_at ? 'until ' + fmtDate(u.plan_expires_at) : 'lifetime') : 'Free'],
+        ...(prem ? [] : [['Trial', trialLine(u)]]),
+        ['Status', susp ? 'Suspended · ' + untilTxt(u.suspended_until) : 'Active'],
+        ['Last sign-in', ago(u.last_sign_in_at)],
+        ['Joined', fmtDate(u.created_at)],
+        ['ID', u.id.slice(0, 8) + '…']
+      ];
+      if (susp && u.suspend_reason) lines.splice(6, 0, ['Reason', esc(u.suspend_reason)]);
+
+      const items = [];
+      items.push(menuItem('tests', 'list-checks', 'View tests', `${fmtN(u.tests_count)} on record`));
+      items.push(menuItem('copy-email', 'mail', 'Copy email', esc(u.email)));
+      items.push(menuItem('copy-id', 'fingerprint', 'Copy user ID', 'For support lookups'));
+      if (!noProfile) {
+        items.push(menuItem('plan', 'crown', prem ? 'Change or end premium' : 'Give premium', prem ? 'Currently premium' : 'Unlock the subscription', 'gold'));
+        items.push(menuItem('role', adm ? 'shield-off' : 'shield-plus', adm ? 'Remove admin' : 'Make admin', owner ? 'Owner account is protected' : adm ? (self ? "You can't remove yourself" : 'Back to a normal student') : 'Full access to this console', (self && adm) || owner ? 'locked' : ''));
+        if (susp) items.push(menuItem('unsuspend', 'play-circle', 'Lift suspension', 'Let them back in now', 'good'));
+        else items.push(menuItem('suspend', 'pause-circle', 'Suspend account', lockedAdm || self ? (owner ? 'Owner account is protected' : 'Not available for admins') : 'Block access for a while', lockedAdm || self ? 'locked' : ''));
+        items.push(menuItem('reset', 'rotate-ccw', 'Reset progress', owner ? 'Owner account is protected' : 'Erase their test history', 'danger' + (owner ? ' locked' : '')));
+      }
+      items.push(menuItem('delete', 'trash-2', 'Delete account', lockedAdm || self ? (owner ? 'Owner account is protected' : 'Not available for admins') : 'Permanently remove login and data', 'danger' + (lockedAdm || self ? ' locked' : '')));
+
+      const body = `
+        <div class="u-head"><span class="av big" style="background:${avColor(u)}">${esc(initial(u))}</span>
+          <div style="min-width:0"><h3>${esc(dname(u))}</h3><p>${esc(u.email)}</p></div></div>
+        <div class="tags" style="max-width:none;justify-content:flex-start">${tagsFor(u)}</div>
+        <div class="p-stats">
+          <div><div class="v">${fmtN(u.tests_count)}</div><div class="k">Tests</div></div>
+          <div><div class="v">${u.avg_pct == null ? '—' : u.avg_pct + '%'}</div><div class="k">Average</div></div>
+          <div><div class="v">${u.target_score ? u.target_score + '+' : '—'}</div><div class="k">Target</div></div>
+        </div>
+        <div class="info">${lines.map(l => `<div class="line"><span>${l[0]}</span><span>${l[0] === 'Reason' ? l[1] : esc(l[1])}</span></div>`).join('')}</div>
+        ${noProfile ? '<p class="txt" style="margin:10px 4px">This person signed up but never finished setup, so profile actions are hidden.</p>' : ''}
+        <div class="menu">${items.join('')}</div>`;
+
+      const root = openModal({ title: '', body, actions: [{ label: 'Close', style: 'ghost' }] });
+      const on = (a, fn) => { const el = $(`[data-act="${a}"]`, root); if (el) el.addEventListener('click', fn); };
+
+      on('copy-email', () => copy(u.email, 'Email'));
+      on('copy-id', () => copy(u.id, 'User ID'));
+      on('tests', () => showTests(u));
+      on('plan', () => planSheet(u));
+      on('role', () => roleSheet(u));
+      on('suspend', () => suspendSheet(u));
+      on('unsuspend', () => confirmSheet(u, {
+        title: 'Lift suspension?', text: `${dname(u)} will be able to sign in again right away.`, label: 'Lift suspension', style: 'primary',
+        run: () => rpc('admin_unsuspend', { target: u.id }), done: 'Suspension lifted'
+      }));
+      on('reset', () => confirmSheet(u, {
+        title: 'Reset progress?', text: `This erases all ${fmtN(u.tests_count)} test results for ${dname(u)}. It can't be undone.`, label: 'Reset progress', style: 'danger',
+        run: () => rpc('admin_reset_progress', { target: u.id }), done: 'Progress reset'
+      }));
+      on('delete', () => deleteSheet(u));
+    }
+
+    function backTo(u) { return { label: 'Back', style: 'ghost', onClick: () => { openUser(u.id); return false; } }; }
+
+    async function showTests(u) {
+      const root = openModal({ title: dname(u) + ' · tests', body: '<p class="empty">Loading…</p>', actions: [backTo(u)] });
+      try {
+        const { data, error } = await sb.from('tests').select('*').eq('user_id', u.id).order('date', { ascending: false }).limit(20);
+        if (error) throw error;
+        if (!data.length) { root.innerHTML = '<p class="empty">No tests yet.</p>'; return; }
+        root.innerHTML = data.map(t => {
+          const pct = t.total ? Math.round(t.score / t.total * 100) : 0;
+          const tone = pct >= 70 ? 'hi' : pct >= 50 ? 'mid' : 'lo';
+          return `<div class="test-item"><div class="test-icon ${tone}">${pct}%</div><div class="test-body"><h4>${esc(t.subject || 'Test')}</h4><p>${t.score}/${t.total} · ${esc(t.mode || 'practice')} · ${ago(t.date)}</p></div></div>`;
+        }).join('');
+      } catch (e) { fail(e); root.innerHTML = '<p class="empty">Could not load tests.</p>'; }
+    }
+
+    function pickerHtml(opts, cls) {
+      return `<div class="seg ${cls || 'two'}" id="pick" style="margin-top:14px">${opts.map((o, i) => `<button data-i="${i}" class="${i === 0 ? 'on' : ''}">${o[0]}</button>`).join('')}</div>`;
+    }
+    function bindPicker(root) {
+      const state = { i: 0 };
+      $$('#pick button', root).forEach(b => b.addEventListener('click', () => {
+        state.i = +b.dataset.i;
+        $$('#pick button', root).forEach(x => x.classList.toggle('on', x === b));
+      }));
+      return state;
+    }
+
+    function planSheet(u) {
+      const prem = isPrem(u);
+      const opts = [['1 month', 30], ['3 months', 90], ['1 year', 365], ['Lifetime', null]];
+      const root = openModal({
+        title: prem ? 'Premium for ' + dname(u) : 'Give premium',
+        body: `<p class="txt">${prem ? 'Pick a new length to replace the current one, or end premium.' : 'Choose how long this account keeps premium.'}</p>${pickerHtml(opts)}`,
+        actions: [
+          { label: prem ? 'Set premium' : 'Give premium', style: 'primary', onClick: async () => {
+              const days = opts[state.i][1];
+              const exp = days == null ? null : new Date(Date.now() + days * DAY).toISOString();
+              await rpc('admin_set_plan', { target: u.id, new_plan: 'premium', expires: exp });
+              await afterAction(u.id, 'Premium set'); return false;
+          } },
+          ...(prem ? [{ label: 'End premium', style: 'danger', onClick: async () => {
+              await rpc('admin_set_plan', { target: u.id, new_plan: 'free', expires: null });
+              await afterAction(u.id, 'Moved to free'); return false;
+          } }] : []),
+          backTo(u)
+        ]
+      });
+      const state = bindPicker(root);
+    }
+
+    function suspendSheet(u) {
+      const opts = [['1 day', 1], ['7 days', 7], ['30 days', 30], ['Until lifted', null]];
+      const root = openModal({
+        title: 'Suspend ' + dname(u),
+        body: `<p class="txt">They'll be signed out and blocked until the time is up or you lift it.</p>${pickerHtml(opts)}
+               <textarea class="field" id="why" maxlength="200" placeholder="Reason (they will see this)" style="margin-top:12px;min-height:80px"></textarea>`,
+        actions: [
+          { label: 'Suspend account', style: 'danger', onClick: async () => {
+              const days = opts[state.i][1];
+              const until = days == null ? null : new Date(Date.now() + days * DAY).toISOString();
+              await rpc('admin_suspend', { target: u.id, until_at: until, why: $('#why', root).value });
+              await afterAction(u.id, 'Account suspended'); return false;
+          } },
+          backTo(u)
+        ]
+      });
+      const state = bindPicker(root);
+    }
+
+    function roleSheet(u) {
+      const adm = isAdm(u);
+      openModal({
+        title: adm ? 'Remove admin?' : 'Make admin?',
+        body: `<p class="txt">${adm ? `${esc(dname(u))} goes back to being a normal student.` : `${esc(dname(u))} will be able to see every account, suspend, delete and manage subscriptions. Only do this for people you trust.`}</p>`,
+        actions: [
+          { label: adm ? 'Remove admin' : 'Make admin', style: adm ? 'danger' : 'primary', onClick: async () => {
+              await rpc('admin_set_role', { target: u.id, new_role: adm ? 'user' : 'admin' });
+              await afterAction(u.id, adm ? 'Admin removed' : 'Now an admin'); return false;
+          } },
+          backTo(u)
+        ]
+      });
+    }
+
+    function confirmSheet(u, c) {
+      openModal({
+        title: c.title, body: `<p class="txt">${esc(c.text)}</p>`,
+        actions: [
+          { label: c.label, style: c.style, onClick: async () => { await c.run(); await afterAction(u.id, c.done); return false; } },
+          backTo(u)
+        ]
+      });
+    }
+
+    function deleteSheet(u) {
+      const root = openModal({
+        title: 'Delete this account?',
+        body: `<p class="txt">${esc(dname(u))} (${esc(u.email)}) loses their login, profile and every test. This can't be undone.</p>
+               <input class="field" id="del-confirm" placeholder='Type DELETE to confirm' autocomplete="off" style="margin-top:14px" />`,
+        actions: [
+          { label: 'Delete forever', style: 'danger', onClick: async () => {
+              if ($('#del-confirm', root).value.trim() !== 'DELETE') { toast('Type DELETE first', true); return false; }
+              await rpc('admin_delete_user', { target: u.id });
+              toast('Account deleted');
+              try { await Promise.all([loadUsers(), loadStats()]); } catch (e) { fail(e); }
+              renderAll();
+          } },
+          backTo(u)
+        ]
+      });
+    }
+
+    /* ---------- admins ---------- */
+    function renderAdmins() {
+      const list = users.filter(isAdm);
+      $('#admin-count').textContent = list.length + (list.length === 1 ? ' admin' : ' admins');
+      const root = $('#admin-list');
+      root.innerHTML = list.length ? list.map(rowHtml).join('') : '<p class="empty">No admins found.</p>';
+      bindRows(root);
+    }
+    function addAdmin() {
+      const input = $('#admin-email');
+      const email = input.value.trim().toLowerCase();
+      if (!email) return toast('Enter an email', true);
+      const u = users.find(x => (x.email || '').toLowerCase() === email);
+      if (!u) return toast('No account with that email', true);
+      if (isAdm(u)) return toast('Already an admin', true);
+      if (!u.has_profile) return toast('They have not finished setup yet', true);
+      roleSheet(u);
+      input.value = '';
+    }
+
+    /* ---------- announcements ---------- */
+    const KIND_ICON = { info: 'info', update: 'sparkles', warning: 'triangle-alert' };
+    async function loadAnn() {
+      const root = $('#ann-list');
+      try {
+        const { data, error } = await sb.from('announcements').select('*').order('created_at', { ascending: false }).limit(50);
+        if (error) throw error;
+        $('#ann-count').textContent = data.length + ' total';
+        if (!data.length) { root.innerHTML = '<p class="empty">No announcements yet.<br/>Publish one and students see it next time they open the app.</p>'; return; }
+        root.innerHTML = data.map(a => `<div class="ann">
+          <div class="ann-top"><h4>${esc(a.title)}</h4><em class="tag ${annState(a)[1]}">${annState(a)[0]}</em></div>
+          <p>${esc(a.body)}</p>
+          <div class="ann-actions">
+            <button class="mini ${a.active ? 'live' : ''}" data-toggle="${esc(a.id)}" data-on="${a.active ? 1 : 0}"><i data-lucide="${a.active ? 'eye-off' : 'eye'}"></i>${a.active ? 'Hide' : 'Show'}</button>
+            <button class="mini del" data-del="${esc(a.id)}"><i data-lucide="trash-2"></i>Delete</button>
+            <span style="margin-left:auto;color:var(--muted);font-size:.76rem;align-self:center">${ago(a.created_at)}${annLeft(a)}</span>
+          </div></div>`).join('');
+        icons();
+        $$('[data-toggle]', root).forEach(b => b.addEventListener('click', async () => {
+          const { error } = await sb.from('announcements').update({ active: b.dataset.on !== '1' }).eq('id', b.dataset.toggle);
+          if (error) return fail(error);
+          loadAnn();
+        }));
+        $$('[data-del]', root).forEach(b => b.addEventListener('click', () => openModal({
+          title: 'Delete announcement?', body: '<p class="txt">Students will no longer see it.</p>',
+          actions: [{ label: 'Delete', style: 'danger', onClick: async () => {
+            const { error } = await sb.from('announcements').delete().eq('id', b.dataset.del);
+            if (error) throw error;
+            toast('Deleted'); loadAnn();
+          } }, { label: 'Cancel', style: 'ghost' }]
+        })));
+      } catch (e) { fail(e); root.innerHTML = '<p class="empty">Could not load announcements.</p>'; }
+    }
+    async function sendAnn() {
+      const title = $('#ann-title').value.trim(), body = $('#ann-body').value.trim();
+      if (!title || !body) return toast('Add a title and a message', true);
+      const btn = $('#ann-send'); btn.disabled = true;
+      const lifeBtn = $('#ann-life .on'); const lifeDays = lifeBtn ? +lifeBtn.dataset.days : 7;
+      const expires_at = lifeDays ? new Date(Date.now() + lifeDays * DAY).toISOString() : null;
+      const { error } = await sb.from('announcements').insert([{ title, body, kind: ui.annKind, active: true, expires_at }]);
+      btn.disabled = false;
+      if (error) return fail(error);
+      $('#ann-title').value = ''; $('#ann-body').value = '';
+      toast('Published'); loadAnn();
+    }
+
+    /* ---------- activity ---------- */
+    const LOG = {
+      make_admin: ['shield-plus', 'made admin'], remove_admin: ['shield-off', 'removed admin from'],
+      suspend: ['pause-circle', 'suspended'], unsuspend: ['play-circle', 'lifted suspension for'],
+      set_plan: ['crown', 'changed plan for'], reset_progress: ['rotate-ccw', 'reset progress for'],
+      delete_user: ['trash-2', 'deleted'],
+      payment_approved: ['badge-check', 'approved payment for'], payment_rejected: ['x-circle', 'rejected payment for']
+    };
+    async function loadLogs() {
+      const root = $('#log-list');
+      try {
+        const { data, error } = await sb.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(100);
+        if (error) throw error;
+        if (!data.length) { root.innerHTML = '<p class="empty">No admin actions yet.</p>'; return; }
+        root.innerHTML = data.map(l => {
+          const m = LOG[l.action] || ['activity', l.action];
+          const who = (l.admin_email || 'An admin').split('@')[0];
+          return `<div class="log"><span class="menu-ic"><i data-lucide="${m[0]}"></i></span><div><h4><b>${esc(who)}</b> ${esc(m[1])} <b>${esc(l.target_email || 'an account')}</b></h4><p>${l.details ? esc(l.details) + ' · ' : ''}${ago(l.created_at)}</p></div></div>`;
+        }).join('');
+        icons();
+      } catch (e) { fail(e); root.innerHTML = '<p class="empty">Could not load activity.</p>'; }
+    }
+
+    /* ---------- payments ---------- */
+    const naira = n => '₦' + Number(n || 0).toLocaleString();
+    const refOf = id => 'STR-' + String(id).replace(/-/g, '').slice(0, 5).toUpperCase();
+    const SET_KEYS = ['price', 'premium_days', 'trial_days', 'bank_name', 'account_number', 'account_name'];
+    const settings = { price: '3500', premium_days: '30', trial_days: '3', bank_name: 'OPay', account_number: '', account_name: '' };
+    const pay = { filter: 'pending', all: [], urls: {} };
+
+    function trialLine(u) {
+      const end = new Date(u.created_at).getTime() + (+settings.trial_days || 3) * DAY;
+      return (end > Date.now() ? 'Ends ' : 'Ended ') + fmtDate(end);
+    }
+    function annState(a) {
+      const exp = a.expires_at && new Date(a.expires_at) <= new Date();
+      if (exp) return ['Expired', 't-susp'];
+      return a.active ? ['Live', 't-new'] : ['Hidden', ''];
+    }
+    function annLeft(a) {
+      if (!a.expires_at) return '';
+      const ms = new Date(a.expires_at).getTime() - Date.now();
+      if (ms <= 0) return ' · expired';
+      const d = Math.ceil(ms / DAY);
+      return ' · ends in ' + d + (d === 1 ? ' day' : ' days');
+    }
+    function setBadge(n) {
+      const b = $('#pay-badge');
+      b.hidden = !n; b.textContent = n > 99 ? '99+' : n;
+    }
+
+    async function loadSettings() {
+      try {
+        const { data } = await sb.from('app_settings').select('*');
+        (data || []).forEach(r => { settings[r.key] = r.value; });
+      } catch (e) {}
+      SET_KEYS.forEach(k => { const el = $('#set-' + k); if (el && document.activeElement !== el) el.value = settings[k] || ''; });
+    }
+    async function saveSettings() {
+      const val = k => $('#set-' + k).value.trim();
+      const num = (k, min) => /^\d+$/.test(val(k)) && +val(k) >= min;
+      if (!num('price', 1)) return toast('Price must be a number', true);
+      if (!num('premium_days', 1)) return toast('Premium days must be 1 or more', true);
+      if (!num('trial_days', 0)) return toast('Trial days must be 0 or more', true);
+      if (!/^\d{6,12}$/.test(val('account_number'))) return toast('Check the account number', true);
+      if (!val('bank_name')) return toast('Add the bank name', true);
+      const rows = SET_KEYS.map(k => ({ key: k, value: val(k) }));
+      const { error } = await sb.from('app_settings').upsert(rows, { onConflict: 'key' });
+      if (error) return fail(error);
+      rows.forEach(r => { settings[r.key] = r.value; });
+      toast('Settings saved');
+    }
+
+    async function pruneReceipts(list) {
+      const old = list.filter(p => p.receipt_path && p.status !== 'pending' && p.reviewed_at && Date.now() - new Date(p.reviewed_at).getTime() > 30 * DAY);
+      if (!old.length) return 0;
+      const { error } = await sb.storage.from('receipts').remove(old.map(p => p.receipt_path));
+      if (error) return 0;
+      await sb.from('payments').update({ receipt_path: null }).in('id', old.map(p => p.id));
+      old.forEach(p => { p.receipt_path = null; });
+      return old.length;
+    }
+    async function runCleanup(manual) {
+      try {
+        const r = await rpc('admin_cleanup');
+        const list = (await rpc('admin_list_payments', { flt: 'all' })) || [];
+        const n = await pruneReceipts(list);
+        if (manual) toast(`Removed ${r.announcements} announcements, ${r.logs} logs, ${n} receipts`);
+      } catch (e) { if (manual) fail(e); }
+    }
+
+    async function loadPayments() {
+      const root = $('#pay-list');
+      if (!pay.all.length) root.innerHTML = '<p class="empty">Loading…</p>';
+      try {
+        const list = (await rpc('admin_list_payments', { flt: 'all' })) || [];
+        await pruneReceipts(list);
+        pay.all = list;
+        setBadge(list.filter(p => p.status === 'pending').length);
+        await renderPayments();
+      } catch (e) { fail(e); root.innerHTML = '<p class="empty">Could not load payments.</p>'; }
+    }
+    async function renderPayments() {
+      $$('#pay-filter button').forEach(b => b.classList.toggle('on', b.dataset.f === pay.filter));
+      const list = pay.all.filter(p => pay.filter === 'all' || p.status === pay.filter);
+      const root = $('#pay-list');
+      if (!list.length) { root.innerHTML = `<p class="empty">${pay.filter === 'pending' ? 'No pending payments. 🎉' : 'Nothing here yet.'}</p>`; return; }
+      const need = list.map(p => p.receipt_path).filter(x => x && !pay.urls[x]);
+      if (need.length) {
+        try {
+          const { data } = await sb.storage.from('receipts').createSignedUrls(need, 3600);
+          (data || []).forEach(d => { if (d.signedUrl) pay.urls[d.path] = d.signedUrl; });
+        } catch (e) {}
+      }
+      root.innerHTML = list.map(payRow).join('');
+      icons();
+      $$('[data-pv]', root).forEach(b => b.addEventListener('click', () => viewReceipt(b.dataset.pv)));
+      $$('[data-pa]', root).forEach(b => b.addEventListener('click', () => approveSheet(pay.all.find(p => p.id === b.dataset.pa))));
+      $$('[data-pr]', root).forEach(b => b.addEventListener('click', () => rejectSheet(pay.all.find(p => p.id === b.dataset.pr))));
+      $$('[data-pk]', root).forEach(b => b.addEventListener('click', () => revokeSheet(pay.all.find(p => p.id === b.dataset.pk))));
+      $$('[data-pu]', root).forEach(b => b.addEventListener('click', () => openUser(b.dataset.pu)));
+    }
+    function payRow(p) {
+      const tone = p.status === 'approved' ? 't-new' : p.status === 'rejected' ? 't-susp' : 't-prem';
+      const nm = p.name || (p.email || '').split('@')[0] || 'Unnamed';
+      const col = PAL[(nm.charCodeAt(0) || 0) % PAL.length];
+      const url = pay.urls[p.receipt_path];
+      const thumb = !p.receipt_path ? '<div class="rcpt">Receipt removed</div>'
+        : url ? `<button class="rcpt" data-pv="${esc(p.id)}" aria-label="View receipt"><img src="${esc(url)}" alt="Receipt" loading="lazy"></button>` : '<div class="rcpt">Receipt unavailable</div>';
+      let actions = '';
+      if (p.status === 'pending') {
+        actions = `<button class="mini ok" data-pa="${esc(p.id)}"><i data-lucide="check"></i>Approve</button><button class="mini del" data-pr="${esc(p.id)}"><i data-lucide="x"></i>Reject</button>`;
+      } else if (p.status === 'approved' && p.premium_now) {
+        actions = `<button class="mini del" data-pk="${esc(p.id)}"><i data-lucide="crown"></i>Revoke premium</button>`;
+      }
+      actions += `<button class="mini" data-pu="${esc(p.user_id)}"><i data-lucide="user"></i>Account</button>`;
+      const prem = p.status === 'approved' ? (p.premium_now ? `<div class="line"><span>Premium</span><span>${p.plan_expires_at ? 'until ' + fmtDate(p.plan_expires_at) : 'lifetime'}</span></div>` : '<div class="line"><span>Premium</span><span>not active</span></div>') : '';
+      return `<div class="pay-item">
+        <div class="pay-top"><span class="av" style="background:${col}">${esc(nm.charAt(0))}</span>
+          <span class="ub"><b>${esc(nm)}</b><small>${esc(p.email)}</small></span>
+          <em class="tag ${tone}">${p.status.charAt(0).toUpperCase() + p.status.slice(1)}</em></div>
+        <div class="pay-mid">${thumb}<div class="pay-info">
+          <div class="line"><span>Amount</span><span>${naira(p.amount)}</span></div>
+          <div class="line"><span>Reference</span><span>${refOf(p.user_id)}</span></div>
+          ${p.sender_name ? `<div class="line"><span>Sent from</span><span>${esc(p.sender_name)}</span></div>` : ''}
+          <div class="line"><span>Submitted</span><span>${ago(p.created_at)}</span></div>
+          ${prem}
+        </div></div>
+        ${p.note ? `<div class="pay-note">${esc(p.note)}</div>` : ''}
+        <div class="pay-actions">${actions}</div></div>`;
+    }
+    function viewReceipt(id) {
+      const p = pay.all.find(x => x.id === id); const url = p && pay.urls[p.receipt_path];
+      if (!url) return toast('Receipt unavailable', true);
+      openModal({ title: (p.name || p.email) + ' · ' + naira(p.amount), body: `<img class="rcpt-full" src="${esc(url)}" alt="Receipt" />`, actions: [{ label: 'Close', style: 'ghost' }] });
+    }
+    async function afterPay(msg) {
+      toast(msg);
+      try { await Promise.all([loadUsers(), loadStats()]); } catch (e) { fail(e); }
+      renderAll();
+      await loadPayments();
+    }
+    function approveSheet(p) {
+      if (!p) return;
+      const d = settings.premium_days;
+      openModal({
+        title: 'Approve payment?',
+        body: `<p class="txt">${esc(p.name || p.email)} says they paid ${naira(p.amount)} (reference <b>${refOf(p.user_id)}</b>). Check your OPay app first. Approving gives <b>${esc(d)} days</b> of premium, added to any time they already have.</p>`,
+        actions: [
+          { label: `Give ${d} days of premium`, style: 'primary', onClick: async () => { await rpc('admin_review_payment', { pid: p.id, approve: true, why: '' }); await afterPay('Premium activated'); } },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
+    }
+    function rejectSheet(p) {
+      if (!p) return;
+      const root = openModal({
+        title: 'Reject payment?',
+        body: `<p class="txt">The student will see your reason and can send a new receipt.</p>
+               <textarea class="field" id="rej-note" maxlength="200" placeholder="Reason, e.g. Payment not received" style="margin-top:12px;min-height:80px"></textarea>`,
+        actions: [
+          { label: 'Reject', style: 'danger', onClick: async () => { await rpc('admin_review_payment', { pid: p.id, approve: false, why: $('#rej-note', root).value }); await afterPay('Payment rejected'); } },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
+    }
+    function revokeSheet(p) {
+      if (!p) return;
+      openModal({
+        title: 'Revoke premium?',
+        body: `<p class="txt">${esc(p.name || p.email)} goes back to the free plan right away. Their practice locks if the free trial is over.</p>`,
+        actions: [
+          { label: 'Revoke premium', style: 'danger', onClick: async () => { await rpc('admin_set_plan', { target: p.user_id, new_plan: 'free', expires: null }); await afterPay('Back to free plan'); } },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
+    }
+    $$('#pay-filter button').forEach(b => b.addEventListener('click', () => { pay.filter = b.dataset.f; renderPayments(); }));
+    $('#set-save').addEventListener('click', saveSettings);
+    $('#cleanup-btn').addEventListener('click', () => runCleanup(true));
+
+    /* ---------- tabs ---------- */
+    const TITLES = { overview: 'Overview', users: 'Users', payments: 'Payments', admins: 'Admins', announce: 'Announcements', logs: 'Activity' };
+    let active = 'overview';
+    function goTo(id) {
+      if (id === active && id !== 'users') return;
+      active = id;
+      $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.target === id));
+      $$('.page').forEach(p => { p.classList.toggle('active', p.id === id); p.classList.remove('in'); });
+      const pg = document.getElementById(id);
+      void pg.offsetWidth; pg.classList.add('in');
+      $('#page-title').textContent = TITLES[id];
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      if (id === 'users') renderUsers();
+      if (id === 'payments') { loadPayments(); loadSettings(); }
+      if (id === 'announce') loadAnn();
+      if (id === 'logs') loadLogs();
+    }
+    $$('.nav-item').forEach(b => b.addEventListener('click', () => goTo(b.dataset.target)));
+
+    function renderAll() { renderOverview(); renderUsers(); renderAdmins(); setBadge(stats ? stats.pending_payments : 0); icons(); }
+
+    /* ---------- events ---------- */
+    let searchT;
+    $('#user-search').addEventListener('input', e => { clearTimeout(searchT); searchT = setTimeout(() => { ui.q = e.target.value; ui.shown = 40; renderUsers(); }, 160); });
+    $$('#sort-seg button').forEach(b => b.addEventListener('click', () => { ui.sort = b.dataset.sort; renderUsers(); }));
+    $('#export-btn').addEventListener('click', exportCsv);
+    $('#admin-add-btn').addEventListener('click', addAdmin);
+    $('#admin-email').addEventListener('keydown', e => { if (e.key === 'Enter') addAdmin(); });
+    $$('#ann-kind button').forEach(b => b.addEventListener('click', () => {
+      ui.annKind = b.dataset.kind;
+      $$('#ann-kind button').forEach(x => x.classList.toggle('on', x === b));
+    }));
+    $('#ann-send').addEventListener('click', sendAnn);
+    $$('#ann-life button').forEach(b => b.addEventListener('click', () => $$('#ann-life button').forEach(x => x.classList.toggle('on', x === b))));
+    $('#refresh-btn').addEventListener('click', async () => {
+      await reloadCore();
+      if (active === 'payments') loadPayments();
+      if (active === 'announce') loadAnn();
+      if (active === 'logs') loadLogs();
+      toast('Refreshed');
+    });
+    $('#exit-btn').addEventListener('click', () => location.href = 'app.html');
+
+    /* ---------- boot ---------- */
+    function gateShow(title, text, withBtn) {
+      const g = $('#gate');
+      g.classList.add('stop');
+      $('#gate-title').textContent = title;
+      $('#gate-text').textContent = text;
+      const b = $('#gate-btn');
+      b.hidden = !withBtn;
+      b.onclick = () => location.replace('app.html');
+    }
+
+    async function init() {
+      let session = null;
+      try { session = (await sb.auth.getSession()).data.session; } catch (e) {}
+      if (!session) return location.replace('index.html');
+      me = session.user;
+
+      let ok = false, err = null;
+      try {
+        const { data, error } = await sb.rpc('is_admin');
+        if (error) err = error; else ok = data === true;
+      } catch (e) { err = e; }
+
+      if (err) {
+        const m = (err.message || '');
+        return gateShow('Setup needed', /function|schema/i.test(m) ? 'Run admin-setup.sql in Supabase, then reload.' : 'Could not check access. ' + m, true);
+      }
+      if (!ok) return gateShow('Admins only', 'This account does not have access to the admin console.', true);
+
+      try { await Promise.all([loadUsers(), loadStats()]); }
+      catch (e) { fail(e); }
+
+      $('#app').hidden = false;
+      $('#dock').hidden = false;
+      renderAll();
+      loadSettings(); runCleanup(false);
+      $('#overview').classList.add('in');
+      const g = $('#gate');
+      g.classList.add('out');
+      setTimeout(() => g.remove(), 450);
+    }
+    init();
+  })();
+  </script>
+</body>
+</html>

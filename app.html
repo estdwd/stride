@@ -2,433 +2,417 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#000000" />
   <title>Stride | App</title>
 
-  <!-- Not logged in? Go to login. Otherwise the intro plays on every load. -->
+  <!-- Hide page initially until Auth is verified -->
   <script>
-    (function () {
-      var THIRTY = 30 * 24 * 60 * 60 * 1000;
-      function ok() {
-        try {
-          var u = JSON.parse(localStorage.getItem('stride_user'));
-          var t = Number(localStorage.getItem('stride_last_active'));
-          return !!(u && u.id && u.name && u.email && t && (Date.now() - t) < THIRTY);
-        } catch (e) { return false; }
-      }
-      function clearAuth() {
-        try {
-          localStorage.removeItem('stride_user');
-          localStorage.removeItem('stride_last_active');
-        } catch (e) {}
-      }
-      window.strideSessionOk = ok;
-      window.strideClearAuth = clearAuth;
-
-      if (!ok()) {
-        clearAuth();
-        document.documentElement.style.visibility = 'hidden';
-        location.replace('index.html');
-        return;
-      }
-
-      document.documentElement.classList.add('has-intro');
-    })();
+    document.documentElement.style.visibility = 'hidden';
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     :root {
-      --logo: #C9500F;
-      --bg: #000;
-      --ink: #0b0b0b;
-      --muted: #9a9a9a;
-      --line: rgba(255, 255, 255, 0.18);
-      --surface: rgba(14, 14, 14, 0.72);
-
-      --orange: #EB7650;
-      --yellow: #F8CB4A;
-      --cream:  #F6EDCB;
-      --green:  #97D86E;
-      --blue:   #8DB9EA;
+      --logo: #C9500F; --bg: #020305; --ink: #0b0b0b; --muted: #9a9a9a;
+      --line: rgba(255, 255, 255, 0.16); --surface: rgba(16, 16, 16, 0.86); --surface-2: rgba(0, 0, 0, 0.55);
+      --orange: #EB7650; --yellow: #F8CB4A; --cream: #F6EDCB; --green: #97D86E; --blue: #8DB9EA; --red: #E8615A;
+      --r-card: 40px; --r-panel: 34px; --ease: cubic-bezier(.16, 1, .3, 1);
     }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Outfit', -apple-system, 'Segoe UI', Roboto, sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Outfit', -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
     html { background: var(--bg); }
-
-    body {
-      background: transparent;
-      color: #fff;
-      min-height: 100vh;
-      padding: 28px 18px 150px 18px;
-      max-width: 560px;
-      margin: 0 auto;
-      overflow-x: hidden;
-    }
-
+    body { background: transparent; color: #fff; min-height: 100vh; padding: 26px 18px 160px; max-width: 560px; margin: 0 auto; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
     button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
-    button:focus-visible, .pill:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+    button:focus-visible, a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; border-radius: 12px; }
     svg { width: 20px; height: 20px; }
+    a { color: inherit; text-decoration: none; }
 
-    /* ---------- BACKGROUND ---------- */
-    .bg { position: fixed; inset: 0; z-index: -1; background: #020305; overflow: hidden; }
-    .glow { position: absolute; border-radius: 50%; filter: blur(70px); will-change: transform; }
-    .g-blue {
-      width: 80vmax; height: 62vmax; max-width: 620px; max-height: 520px;
-      left: -45%; top: -12%;
-      background: radial-gradient(closest-side, rgba(24,120,170,0.75), rgba(10,60,95,0.35) 55%, transparent 100%);
-      animation: driftA 38s ease-in-out infinite alternate;
-    }
-    .g-arc {
-      width: 110vmax; height: 52vmax; max-width: 900px; max-height: 440px;
-      right: -75%; top: 14%;
-      background: radial-gradient(closest-side, rgba(255,110,30,0.65), rgba(190,60,10,0.3) 60%, transparent 100%);
-      transform: rotate(-24deg);
-      animation: driftB 44s ease-in-out infinite alternate;
-    }
-    .g-orange {
-      width: 90vmax; height: 90vmax; max-width: 640px; max-height: 640px;
-      left: -10%; bottom: -34%;
-      background: radial-gradient(closest-side, rgba(255,105,28,0.6), rgba(160,50,8,0.28) 58%, transparent 100%);
-      animation: driftC 50s ease-in-out infinite alternate;
-    }
-    .g-deep {
-      width: 70vmax; height: 70vmax; max-width: 480px; max-height: 480px;
-      right: -40%; bottom: -8%;
-      background: radial-gradient(closest-side, rgba(10,70,115,0.5), transparent 100%);
-      animation: driftA 46s ease-in-out infinite alternate-reverse;
-    }
-    @keyframes driftA { to { transform: translate3d(70px, 90px, 0) scale(1.12); } }
-    @keyframes driftB { from { transform: rotate(-24deg) translate3d(0,0,0); } to { transform: rotate(-18deg) translate3d(-90px, 50px, 0); } }
-    @keyframes driftC { to { transform: translate3d(60px, -90px, 0) scale(1.1); } }
+    .bg { position: fixed; inset: 0; z-index: -1; background: #020305; overflow: hidden; contain: strict; }
+    .glow { position: absolute; border-radius: 50%; pointer-events: none; }
+    .g-blue { width: 640px; height: 520px; left: -300px; top: -160px; background: radial-gradient(closest-side, rgba(24,120,170,0.55), rgba(10,60,95,0.22) 55%, rgba(0,0,0,0) 78%); animation: driftA 42s ease-in-out infinite alternate; }
+    .g-orange { width: 560px; height: 560px; right: -320px; top: 18%; background: radial-gradient(closest-side, rgba(255,110,30,0.5), rgba(190,60,10,0.18) 58%, rgba(0,0,0,0) 80%); animation: driftB 52s ease-in-out infinite alternate; }
+    .g-deep { width: 620px; height: 620px; left: -220px; bottom: -320px; background: radial-gradient(closest-side, rgba(255,105,28,0.42), rgba(160,50,8,0.14) 58%, rgba(0,0,0,0) 80%); animation: driftA 60s ease-in-out infinite alternate-reverse; }
+    @keyframes driftA { to { transform: translate3d(60px, 70px, 0) scale(1.08); } }
+    @keyframes driftB { to { transform: translate3d(-70px, 50px, 0) scale(1.06); } }
+    .bg::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 70% at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.62) 100%), rgba(0,0,0,0.32); }
+    .bg::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(circle at center, rgba(0,0,0,0) 0, rgba(0,0,0,0) 1px, rgba(0,0,0,0.8) 1.7px); background-size: 5px 5px; }
 
-    .bg::before {
-      content: ""; position: absolute; inset: 0;
-      background:
-        radial-gradient(120% 70% at 50% 50%, transparent 0%, rgba(0,0,0,0.55) 100%),
-        rgba(0,0,0,0.3);
-    }
-    .bg::after {
-      content: ""; position: absolute; inset: 0;
-      background-image: radial-gradient(circle at center, rgba(0,0,0,0) 0, rgba(0,0,0,0) 1px, rgba(0,0,0,0.82) 1.7px);
-      background-size: 5px 5px;
-    }
-
-    @media (prefers-reduced-motion: reduce) { .glow { animation: none; } }
-
-    /* ---------- SPLASH INTRO: logo glows in, spins + slides left, name reveals ---------- */
-    #splash {
-      position: fixed; inset: 0; z-index: 1000;
-      background: #000;
-      display: flex; align-items: center; justify-content: center;
-      overflow: hidden;
-      /* CSS failsafe: never gets stuck even if JS fails */
-      animation: splashOut .5s ease 4.6s forwards;
-    }
-    #splash.leaving { animation: splashOut .45s ease forwards; }
+    #splash { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; animation: splashOut .5s ease 2.9s forwards; }
+    #splash.leaving { animation: splashOut .4s ease forwards; }
     .no-intro #splash { display: none; }
     @keyframes splashOut { to { opacity: 0; visibility: hidden; } }
-
-    .splash-glow {
-      position: absolute; left: 50%; top: 50%;
-      width: 120vmin; height: 120vmin;
-      transform: translate(-50%, -50%);
-      background: radial-gradient(closest-side, rgba(255,110,30,0.55), rgba(190,60,10,0.22) 55%, transparent 100%);
-      filter: blur(30px);
-      animation: glowIn 1.6s ease-out .1s backwards;
-    }
-    .splash-dots {
-      position: absolute; inset: 0;
-      background-image: radial-gradient(circle at center, rgba(0,0,0,0) 0, rgba(0,0,0,0) 1px, rgba(0,0,0,0.82) 1.7px);
-      background-size: 5px 5px;
-    }
+    .splash-glow { position: absolute; left: 50%; top: 50%; width: 110vmin; height: 110vmin; transform: translate(-50%, -50%); background: radial-gradient(closest-side, rgba(255,110,30,0.5), rgba(190,60,10,0.18) 55%, rgba(0,0,0,0) 100%); animation: glowIn 1.4s ease-out .05s backwards; pointer-events: none; }
+    .splash-dots { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle at center, rgba(0,0,0,0) 0, rgba(0,0,0,0) 1px, rgba(0,0,0,0.8) 1.7px); background-size: 5px 5px; }
     @keyframes glowIn { from { opacity: 0; transform: translate(-50%, -50%) scale(.6); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
-
     .splash-row { position: relative; display: flex; align-items: center; justify-content: center; }
-
-    /* wrapper handles the spin so it never clashes with the glow-in animation */
-    .splash-spin {
-      display: flex; flex-shrink: 0;
-      animation: spinTurn 1s cubic-bezier(.65, 0, .35, 1) 1.5s both;
-    }
+    .splash-spin { display: flex; flex-shrink: 0; animation: spinTurn .9s cubic-bezier(.65, 0, .35, 1) 1.15s both; }
     @keyframes spinTurn { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .splash-logo { width: 64px; height: 80px; flex-shrink: 0; color: var(--logo); filter: drop-shadow(0 0 18px rgba(255, 110, 30, 0.55)); animation: logoIn 1s var(--ease) .15s both; }
+    @keyframes logoIn { 0% { opacity: 0; transform: scale(.72); } 60% { opacity: 1; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
+    .splash-name { overflow: hidden; white-space: nowrap; font-size: 2.9rem; font-weight: 500; letter-spacing: -0.04em; line-height: 1.25; max-width: 0; opacity: 0; animation: nameOut .9s var(--ease) 1.15s forwards; }
+    .splash-name span { display: inline-block; animation: nameSlide .9s var(--ease) 1.15s both; }
+    @keyframes nameOut { from { max-width: 0; margin-left: 0; opacity: 0; } to { max-width: 3.6em; margin-left: 16px; opacity: 1; } }
+    @keyframes nameSlide { from { transform: translateX(-46px); } to { transform: none; } }
 
-    .splash-logo {
-      width: 67px; height: 84px; flex-shrink: 0;
-      color: var(--logo);
-      filter: drop-shadow(0 0 22px rgba(255, 110, 30, 0.6));
-      animation: logoIn 1.2s cubic-bezier(.16, 1, .3, 1) .2s both;
-    }
-    @keyframes logoIn {
-      0%   { opacity: 0; transform: scale(.7); filter: drop-shadow(0 0 0 rgba(255,110,30,0)); }
-      60%  { opacity: 1; transform: scale(1.05); filter: drop-shadow(0 0 38px rgba(255,120,30,0.95)); }
-      100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 22px rgba(255,110,30,0.6)); }
-    }
-    .splash-name {
-      overflow: hidden; white-space: nowrap;
-      font-size: 3rem; font-weight: 500; letter-spacing: -0.04em; line-height: 1.25;
-      max-width: 0; opacity: 0;
-      animation: nameOut 1s cubic-bezier(.65, 0, .35, 1) 1.5s forwards;
-    }
-    .splash-name span { display: inline-block; animation: nameSlide 1s cubic-bezier(.65, 0, .35, 1) 1.5s both; }
-    @keyframes nameOut { from { max-width: 0; margin-left: 0; opacity: 0; } to { max-width: 3.6em; margin-left: 18px; opacity: 1; } }
-    @keyframes nameSlide { from { transform: translateX(-50px); } to { transform: none; } }
+    .page-container, .dock { transition: opacity .6s ease, transform .6s var(--ease); }
+    html.has-intro:not(.revealed) .page-container, html.has-intro:not(.revealed) .dock { opacity: 0; transform: translateY(16px); }
 
-    @media (prefers-reduced-motion: reduce) {
-      .splash-logo, .splash-glow, .splash-name, .splash-name span { animation-duration: .01s; animation-delay: 0s; }
-      .splash-spin { animation: none; }
-    }
-
-    /* app content fades up after the splash */
-    .page-container, .dock { transition: opacity .7s ease, transform .7s cubic-bezier(.16, 1, .3, 1); }
-    html.has-intro:not(.revealed) .page-container,
-    html.has-intro:not(.revealed) .dock { opacity: 0; transform: translateY(18px); }
-
-    /* ---------- PAGES ---------- */
     .page-container { position: relative; width: 100%; }
-    .page {
-      position: absolute; top: 0; left: 0; width: 100%;
-      opacity: 0; visibility: hidden; pointer-events: none;
-      transform: translateY(14px);
-      transition: opacity .3s ease, transform .3s ease, visibility .3s;
-    }
-    .page.active {
-      position: relative;
-      opacity: 1; visibility: visible; pointer-events: auto;
-      transform: translateY(0);
-    }
+    .page { display: none; position: relative; width: 100%; }
+    .page.active { display: block; animation: pageIn .28s ease both; }
+    @keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    .page.in .stagger { animation: rise .5s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 55ms); }
 
-    /* ---------- HEADER ---------- */
-    .top-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 26px; }
-    .top-header h1 {
-      font-size: clamp(2.9rem, 14vw, 4.2rem);
-      font-weight: 400; letter-spacing: -0.045em; line-height: 1.02;
-    }
-    .round-btn {
-      width: 50px; height: 50px; border-radius: 50%;
-      background: rgba(20,20,20,0.75);
-      border: 1px solid rgba(255,255,255,0.08);
-      -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-      display: grid; place-items: center;
-      flex-shrink: 0; margin-top: 2px;
-    }
+    .top-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; gap: 12px; }
+    .top-header h1 { font-size: clamp(2.4rem, 11vw, 3.2rem); font-weight: 400; letter-spacing: -0.045em; line-height: 1.02; }
+    .eyebrow { font-size: .8rem; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .greet-name { font-size: clamp(2.6rem, 13vw, 3.6rem); font-weight: 400; letter-spacing: -0.045em; line-height: 1.02; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .greet-sub { font-size: .92rem; color: var(--muted); margin-top: 8px; line-height: 1.4; max-width: 30ch; }
+    .round-btn { width: 48px; height: 48px; border-radius: 50%; background: rgba(22,22,22,0.92); border: 1px solid rgba(255,255,255,0.08); display: grid; place-items: center; flex-shrink: 0; margin-top: 2px; transition: transform .18s ease; }
+    .round-btn:active { transform: scale(.93); }
     .dots { display: grid; grid-template-columns: repeat(2, 4px); gap: 5px; }
     .dots i { width: 4px; height: 4px; border-radius: 50%; background: #fff; display: block; }
 
-    /* ---------- FILTER PILLS ---------- */
-    .filter-pills {
-      display: flex; gap: 10px;
-      overflow-x: auto; scrollbar-width: none;
-      margin: 0 -18px 22px; padding: 0 18px;
-    }
+    .filter-pills { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px 20px; padding: 4px 18px 2px; -webkit-overflow-scrolling: touch; }
     .filter-pills::-webkit-scrollbar { display: none; }
-    .pill {
-      display: inline-flex; align-items: center; gap: 10px;
-      height: 50px; padding: 0 22px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(0,0,0,0.25);
-      color: var(--muted);
-      font-size: 1.15rem; font-weight: 400;
-      white-space: nowrap;
-      transition: color .2s, border-color .2s;
-    }
-    .pill .count {
-      display: none;
-      min-width: 26px; height: 26px; padding: 0 6px;
-      border-radius: 999px; border: 1px solid var(--line);
-      background: rgba(255,255,255,0.08);
-      font-size: .78rem; line-height: 24px; text-align: center; color: #fff;
-    }
-    .pill.active { color: #fff; border-color: #fff; }
+    .pill { display: inline-flex; align-items: center; gap: 9px; height: 46px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--line); background: rgba(0,0,0,0.28); color: var(--muted); font-size: 1.02rem; font-weight: 400; white-space: nowrap; transition: color .2s, border-color .2s, background .2s; }
+    .pill .count { display: none; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,0.08); font-size: .74rem; line-height: 22px; text-align: center; color: #fff; }
+    .pill.active { color: #fff; border-color: #fff; background: rgba(255,255,255,0.06); }
     .pill.active .count { display: inline-block; }
 
-    /* ---------- CARDS ---------- */
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .card[hidden] { display: none; }
-
-    .card { position: relative; color: var(--ink); border-radius: 44px; transition: transform .18s ease; }
+    .card { position: relative; color: var(--ink); border-radius: var(--r-card); transition: transform .16s ease; contain: layout paint; overflow: hidden; }
     .card:active { transform: scale(0.98); }
-    .card::before {
-      content: "";
-      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-      width: 30px; height: 3px; border-radius: 2px;
-      background: rgba(0,0,0,0.22);
-    }
-
-    .c-orange { background: var(--orange); }
-    .c-yellow { background: var(--yellow); }
-    .c-cream  { background: var(--cream); }
-    .c-green  { background: var(--green); }
-    .c-blue   { background: var(--blue); }
-
-    .card h3 { font-size: 1.3rem; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; }
-    .card .sub { font-size: .78rem; font-weight: 400; opacity: .6; margin-top: 6px; }
-
-    .heart {
-      width: 40px; height: 40px; border-radius: 50%;
-      background: rgba(0,0,0,0.1);
-      display: grid; place-items: center; flex-shrink: 0;
-      transition: transform .2s ease, background .2s;
-    }
-    .heart svg { width: 18px; height: 18px; }
-    .heart:active { transform: scale(0.85); }
+    .card::before { content: ""; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; border-radius: 2px; background: rgba(0,0,0,0.2); z-index: 2; }
+    .c-orange { background: var(--orange); } .c-yellow { background: var(--yellow); } .c-cream { background: var(--cream); } .c-green { background: var(--green); } .c-blue { background: var(--blue); }
+    .card h3 { font-size: 1.22rem; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15; }
+    .card .sub { font-size: .76rem; font-weight: 400; opacity: .62; margin-top: 5px; }
+    .heart { width: 38px; height: 38px; border-radius: 50%; background: rgba(0,0,0,0.1); display: grid; place-items: center; flex-shrink: 0; color: var(--ink); transition: transform .2s ease, background .2s, color .2s; }
+    .heart svg { width: 17px; height: 17px; }
+    .heart:active { transform: scale(0.84); }
     .card.saved .heart { background: var(--ink); color: #fff; }
     .card.saved .heart svg { fill: currentColor; }
 
-    .tall {
-      min-height: 318px;
-      padding: 30px 14px 14px 18px;
-      display: flex; flex-direction: column; justify-content: space-between;
-    }
+    .tall { min-height: 300px; padding: 28px 14px 14px 16px; display: flex; flex-direction: column; justify-content: space-between; }
     .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-
-    .tasks { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-right: 4px; }
-    .tasks li {
-      display: flex; align-items: center; gap: 10px;
-      padding: 11px 12px; border-radius: 999px;
-      background: rgba(0,0,0,0.12);
-      font-size: .95rem; font-weight: 500;
-      cursor: pointer; transition: opacity .2s;
-    }
-    .chk {
-      width: 24px; height: 24px; border-radius: 50%;
-      border: 2px solid rgba(0,0,0,0.35);
-      display: grid; place-items: center; flex-shrink: 0;
-      transition: background .2s, border-color .2s;
-    }
-    .tasks li.done { opacity: .7; text-decoration: line-through; }
+    .tasks { list-style: none; display: flex; flex-direction: column; gap: 7px; margin-right: 2px; }
+    .tasks li { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-radius: 999px; background: rgba(0,0,0,0.12); font-size: .88rem; font-weight: 500; cursor: pointer; transition: opacity .2s, transform .16s ease; }
+    .tasks li:active { transform: scale(.97); }
+    .chk { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.32); display: grid; place-items: center; flex-shrink: 0; transition: background .2s, border-color .2s; }
+    .tasks li.done { opacity: .68; text-decoration: line-through; }
     .tasks li.done .chk { background: #7b3a24; border-color: #7b3a24; }
-    .tasks li.done .chk::after {
-      content: ""; width: 5px; height: 10px;
-      border: solid #fff; border-width: 0 2px 2px 0;
-      transform: rotate(45deg) translate(-1px, -1px);
-    }
+    .tasks li.done .chk::after { content: ""; width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg) translate(-1px, -1px); animation: chkPop .25s var(--ease); }
+    @keyframes chkPop { from { transform: rotate(45deg) translate(-1px, -1px) scale(.2); } to { transform: rotate(45deg) translate(-1px, -1px) scale(1); } }
 
-    .streak {
-      background-color: var(--yellow);
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='320' viewBox='0 0 200 320' fill='none' stroke='rgba(0,0,0,0.09)' stroke-width='1.5'%3E%3Cellipse cx='120' cy='170' rx='30' ry='46'/%3E%3Cellipse cx='120' cy='170' rx='52' ry='76'/%3E%3Cellipse cx='120' cy='170' rx='76' ry='108'/%3E%3Cellipse cx='120' cy='170' rx='102' ry='142'/%3E%3Cellipse cx='120' cy='170' rx='130' ry='178'/%3E%3C/svg%3E");
-      background-size: cover; background-position: center;
-    }
-    .streak-num { font-size: 7.6rem; font-weight: 600; letter-spacing: -0.06em; line-height: .8; margin-bottom: 14px; }
-    .week { display: flex; gap: 5px; margin-right: 4px; }
-    .week div { flex: 1; text-align: center; font-size: .66rem; font-weight: 500; opacity: .75; }
-    .week b {
-      display: block; width: 100%; aspect-ratio: 1; border-radius: 50%;
-      margin-bottom: 5px; border: 2px solid rgba(0,0,0,0.3);
-    }
+    .streak { background-color: var(--yellow); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='320' viewBox='0 0 200 320' fill='none' stroke='rgba(0,0,0,0.09)' stroke-width='1.5'%3E%3Cellipse cx='120' cy='170' rx='30' ry='46'/%3E%3Cellipse cx='120' cy='170' rx='52' ry='76'/%3E%3Cellipse cx='120' cy='170' rx='76' ry='108'/%3E%3Cellipse cx='120' cy='170' rx='102' ry='142'/%3E%3Cellipse cx='120' cy='170' rx='130' ry='178'/%3E%3C/svg%3E"); background-size: cover; background-position: center; }
+    .streak-num { font-size: 7rem; font-weight: 600; letter-spacing: -0.06em; line-height: .8; margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+    .flame { display: inline-block; transform-origin: 50% 80%; animation: flame 2.2s ease-in-out infinite; }
+    @keyframes flame { 0%, 100% { transform: scale(1) rotate(-2deg); } 50% { transform: scale(1.12) rotate(2deg); } }
+    .week { display: flex; gap: 5px; margin-right: 2px; }
+    .week div { flex: 1; text-align: center; font-size: .64rem; font-weight: 500; opacity: .72; }
+    .week b { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; margin-bottom: 5px; border: 2px solid rgba(0,0,0,0.28); transition: background .3s ease, border-color .3s ease; }
     .week .on b { background: var(--ink); border-color: var(--ink); }
 
-    .wide {
-      grid-column: 1 / -1;
-      display: flex; align-items: center; gap: 14px;
-      min-height: 100px;
-      padding: 22px 16px 14px 14px;
-    }
-    .badge {
-      width: 62px; height: 62px; border-radius: 50%;
-      background: #fff; color: var(--ink);
-      display: grid; place-items: center; flex-shrink: 0;
-    }
-    .badge svg { width: 28px; height: 28px; stroke-width: 1.8; }
+    .wide { grid-column: 1 / -1; display: flex; align-items: center; gap: 13px; min-height: 92px; padding: 20px 14px 14px 12px; }
+    .badge { width: 58px; height: 58px; border-radius: 50%; background: #fff; color: var(--ink); display: grid; place-items: center; flex-shrink: 0; }
+    .badge svg { width: 26px; height: 26px; stroke-width: 1.8; }
     .wide .text { flex: 1; min-width: 0; }
-    .wide .eyebrow { font-size: .78rem; opacity: .6; margin-bottom: 3px; }
-    .wide h3 { font-size: 1.2rem; }
+    .wide .eyebrow-dark { font-size: .74rem; opacity: .6; margin-bottom: 2px; }
+    .wide h3 { font-size: 1.14rem; }
+    .mini-bar { margin-top: 10px; height: 6px; border-radius: 3px; background: rgba(0,0,0,0.16); overflow: hidden; }
+    .mini-bar > div { height: 100%; border-radius: 3px; background: var(--ink); width: 0; transition: width .9s var(--ease); }
 
-    .empty { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 1.05rem; line-height: 1.4; }
+    .empty { text-align: center; color: var(--muted); padding: 56px 20px; font-size: 1rem; line-height: 1.5; }
     .empty[hidden] { display: none; }
 
-    /* ---------- DARK PANELS ---------- */
-    .panel {
-      background: var(--surface);
-      -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 44px;
-      padding: 30px 24px; margin-bottom: 14px;
-    }
-    .panel h3 { font-size: 1.2rem; font-weight: 500; margin-bottom: 16px; }
-    .big { font-size: 4.4rem; font-weight: 400; letter-spacing: -0.05em; line-height: 1; margin-bottom: 18px; }
-    .bar { width: 100%; height: 12px; background: #000; border-radius: 6px; overflow: hidden; }
-    .bar > div { height: 100%; background: var(--orange); border-radius: 6px; }
-    .row { display: flex; justify-content: space-between; margin-top: 12px; color: var(--muted); font-size: .9rem; }
+    .panel { background: var(--surface); border: 1px solid rgba(255,255,255,0.07); border-radius: var(--r-panel); padding: 26px 22px; margin-bottom: 13px; }
+    .panel h3 { font-size: 1.12rem; font-weight: 500; margin-bottom: 16px; letter-spacing: -0.01em; }
+    .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
+    .panel-head h3 { margin-bottom: 0; }
+    .panel-head small { color: var(--muted); font-size: .8rem; }
+
+    .subject-grid { display: flex; flex-wrap: wrap; gap: 9px; }
+    .subject { display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px; border-radius: 999px; border: 1px solid var(--line); background: rgba(0,0,0,0.28); color: var(--muted); font-size: .94rem; transition: color .18s, border-color .18s, background .18s, transform .14s; }
+    .subject:active { transform: scale(.96); }
+    .subject .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .5; }
+    .subject.on { color: #fff; border-color: #fff; background: rgba(255,255,255,0.08); }
+    .subject.on .dot { opacity: 1; background: var(--green); }
+
+    .stepper { display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.42); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; padding: 5px; }
+    .stepper button { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; transition: background .18s, transform .14s; }
+    .stepper button:active { transform: scale(.9); background: rgba(255,255,255,0.1); }
+    .stepper button:disabled { opacity: .28; }
+    .stepper .val { min-width: 68px; text-align: center; font-size: 1.3rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+    .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: rgba(0,0,0,0.42); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; padding: 5px; }
+    .seg button { padding: 11px 6px; border-radius: 999px; font-size: .88rem; color: var(--muted); transition: color .18s, background .18s; }
+    .seg button.on { color: #000; background: #fff; font-weight: 500; }
+
+    .field-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .field-row + .field-row { margin-top: 18px; }
+    .field-label { font-size: .92rem; color: #fff; font-weight: 400; }
+    .field-label small { display: block; color: var(--muted); font-size: .76rem; margin-top: 2px; }
+
+    .start-btn { width: 100%; padding: 18px; border-radius: 999px; background: var(--orange); color: #1a0d06; font-size: 1.02rem; font-weight: 600; letter-spacing: -0.01em; display: flex; align-items: center; justify-content: center; gap: 9px; transition: transform .16s ease, opacity .2s; margin-bottom: 13px; }
+    .start-btn:active { transform: scale(.975); }
+    .start-btn svg { width: 19px; height: 19px; }
+
+    .ring-wrap { display: flex; align-items: center; gap: 22px; }
+    .ring { width: 116px; height: 116px; flex-shrink: 0; transform: rotate(-90deg); }
+    .ring circle { fill: none; stroke-width: 10; stroke-linecap: round; }
+    .ring-bg { stroke: rgba(255,255,255,0.07); }
+    .ring-fg { stroke: var(--orange); stroke-dashoffset: 326.73; }
+    .ring-meta .big { font-size: 2.9rem; font-weight: 400; letter-spacing: -0.05em; line-height: 1; font-variant-numeric: tabular-nums; }
+    .ring-meta .delta { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; font-size: .82rem; color: var(--green); }
+    .ring-meta .delta svg { width: 15px; height: 15px; }
+    .ring-meta .goal { color: var(--muted); font-size: .8rem; margin-top: 6px; }
+
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 13px; }
+    .stat { background: var(--surface); border: 1px solid rgba(255,255,255,0.07); border-radius: 26px; padding: 18px 16px; }
+    .stat .k { font-size: .76rem; color: var(--muted); margin-bottom: 8px; letter-spacing: .01em; }
+    .stat .v { font-size: 1.9rem; font-weight: 500; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+    .stat .v small { font-size: .95rem; font-weight: 400; color: var(--muted); }
+
+    .area { margin-bottom: 16px; }
+    .area:last-child { margin-bottom: 0; }
+    .area-top { display: flex; justify-content: space-between; font-size: .9rem; margin-bottom: 8px; }
+    .area-top span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .area-bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,0.07); overflow: hidden; }
+    .area-bar > div { height: 100%; border-radius: 4px; width: 0; transition: width .9s var(--ease); }
+    .area-bar.weak > div { background: var(--red); }
+    .area-bar.good > div { background: var(--green); }
+
+    .test-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .test-item:last-child { border-bottom: 0; padding-bottom: 0; }
+    .test-item:first-child { padding-top: 0; }
+    .test-icon { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; flex-shrink: 0; font-size: .84rem; font-weight: 600; background: rgba(255,255,255,0.08); font-variant-numeric: tabular-nums; }
+    .test-icon.hi { background: rgba(151,216,110,0.16); color: var(--green); }
+    .test-icon.mid { background: rgba(248,203,74,0.16); color: var(--yellow); }
+    .test-icon.lo { background: rgba(232,97,90,0.16); color: var(--red); }
+    .test-body { flex: 1; min-width: 0; }
+    .test-body h4 { font-size: .95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .test-body p { font-size: .76rem; color: var(--muted); margin-top: 2px; }
+
+    .callout { display: flex; gap: 13px; background: rgba(235,118,80,0.09); border: 1px solid rgba(235,118,80,0.22); border-radius: 26px; padding: 18px; }
+    .callout .ic { width: 38px; height: 38px; border-radius: 50%; background: rgba(235,118,80,0.16); color: var(--orange); display: grid; place-items: center; flex-shrink: 0; }
+    .callout p { font-size: .88rem; line-height: 1.5; color: #e9e9e9; }
+    .callout strong { color: #fff; font-weight: 500; }
 
     .profile-card { text-align: center; }
-    .avatar {
-      width: 84px; height: 84px; border-radius: 50%;
-      background: var(--yellow); color: var(--ink);
-      display: grid; place-items: center;
-      font-size: 2.2rem; font-weight: 600; margin: 0 auto 16px;
-    }
-    .profile-card h2 { font-size: 1.6rem; font-weight: 500; margin-bottom: 4px; }
-    .profile-card .mail { color: var(--muted); margin-bottom: 28px; font-size: .95rem; }
-    .info { text-align: left; background: rgba(0,0,0,0.6); border-radius: 28px; padding: 20px; border: 1px solid rgba(255,255,255,0.08); }
-    .info .line { display: flex; justify-content: space-between; font-size: .95rem; }
-    .info .line + .line { margin-top: 16px; }
-    .info .line span:first-child { color: var(--muted); }
-    .logout {
-      width: 100%; margin-top: 22px; padding: 16px;
-      border-radius: 999px; border: 1px solid rgba(235,118,80,0.35);
-      background: rgba(235,118,80,0.1); color: var(--orange);
-      font-weight: 500; font-size: 1rem;
-    }
+    .avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--yellow); color: var(--ink); display: grid; place-items: center; font-size: 2.1rem; font-weight: 600; margin: 0 auto 14px; }
+    .profile-card h2 { font-size: 1.5rem; font-weight: 500; margin-bottom: 3px; }
+    .profile-card .mail { color: var(--muted); font-size: .9rem; margin-bottom: 22px; }
+    .p-stats { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface-2); border: 1px solid rgba(255,255,255,0.07); border-radius: 26px; padding: 16px 8px; margin-bottom: 14px; }
+    .p-stats div { text-align: center; }
+    .p-stats div + div { border-left: 1px solid rgba(255,255,255,0.07); }
+    .p-stats .v { font-size: 1.4rem; font-weight: 500; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+    .p-stats .k { font-size: .72rem; color: var(--muted); margin-top: 4px; }
 
-    /* ---------- FLOATING DOCK ---------- */
-    .dock {
-      position: fixed; left: 0; right: 0; bottom: 0;
-      padding: 40px 0 22px;
-      display: flex; justify-content: center;
-      background: linear-gradient(to top, rgba(0,0,0,0.85) 20%, rgba(0,0,0,0));
-      z-index: 100; pointer-events: none;
-    }
-    .dock-inner {
-      pointer-events: auto;
-      display: flex; align-items: center; gap: 2px;
-      padding: 6px; border-radius: 999px;
-      background: rgba(24,24,24,0.7);
-      -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    .nav-item {
-      width: 48px; height: 48px; border-radius: 50%;
-      display: grid; place-items: center;
-      color: #7d7d7d; transition: color .2s, background .2s;
-    }
+    .info { text-align: left; background: var(--surface-2); border-radius: 24px; padding: 18px; border: 1px solid rgba(255,255,255,0.07); }
+    .info .line { display: flex; justify-content: space-between; gap: 12px; font-size: .9rem; }
+    .info .line + .line { margin-top: 14px; }
+    .info .line span:first-child { color: var(--muted); }
+    .info .line span:last-child { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .menu { display: flex; flex-direction: column; }
+    .menu-item { display: flex; align-items: center; gap: 14px; width: 100%; padding: 15px 4px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); transition: opacity .18s, transform .14s; }
+    .menu-item:last-child { border-bottom: 0; }
+    .menu-item:active { transform: scale(.985); opacity: .8; }
+    .menu-ic { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.06); display: grid; place-items: center; flex-shrink: 0; color: #fff; }
+    .menu-ic svg { width: 18px; height: 18px; }
+    .menu-body { flex: 1; min-width: 0; }
+    .menu-body h4 { font-size: .95rem; font-weight: 400; }
+    .menu-body p { font-size: .76rem; color: var(--muted); margin-top: 2px; }
+    .chev { color: #555; flex-shrink: 0; }
+    .chev svg { width: 18px; height: 18px; }
+    .menu-item.danger .menu-ic { color: var(--red); background: rgba(232,97,90,0.12); }
+    .menu-item.danger .menu-body h4 { color: var(--red); }
+    .menu-item.disabled { opacity: .45; pointer-events: none; }
+    .tag-soon { font-size: .64rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; background: rgba(255,255,255,0.1); color: #fff; }
+    .foot-note { text-align: center; color: #4a4a4a; font-size: .76rem; margin-top: 26px; line-height: 1.6; }
+    .foot-note strong { color: #6a6a6a; font-weight: 500; }
+
+    .dock { position: fixed; left: 0; right: 0; bottom: 0; padding: 40px 0 20px; display: flex; justify-content: center; background: linear-gradient(to top, rgba(0,0,0,0.92) 22%, rgba(0,0,0,0)); z-index: 100; pointer-events: none; }
+    .dock-inner { pointer-events: auto; display: flex; align-items: center; gap: 2px; padding: 6px; border-radius: 999px; background: rgba(26,26,26,0.97); border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 12px 34px rgba(0,0,0,0.7); }
+    .nav-item { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; color: #7d7d7d; transition: color .2s, background .2s; }
     .nav-item.active { color: #fff; background: rgba(255,255,255,0.12); }
-    .fab {
-      width: 64px; height: 64px; margin: 0 8px; border-radius: 50%;
-      background: #000; color: #fff;
-      border: 1px solid rgba(255,255,255,0.24);
-      display: grid; place-items: center;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
-      transition: transform .18s ease;
-    }
-    .fab svg { width: 28px; height: 28px; }
+    .fab { width: 62px; height: 62px; margin: 0 8px; border-radius: 50%; background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.22); display: grid; place-items: center; box-shadow: 0 10px 28px rgba(0,0,0,0.7); transition: transform .16s ease; }
+    .fab svg { width: 26px; height: 26px; }
     .fab:active { transform: scale(0.92); }
 
-    /* Fallback if the icon library fails to load: show text instead */
-    .no-icons .nav-item { width: auto; padding: 0 12px; border-radius: 24px; font-size: .75rem; }
+    .modal { position: fixed; inset: 0; z-index: 500; display: grid; place-items: end center; padding: 0; }
+    .modal[hidden] { display: none; }
+    .modal-back { position: absolute; inset: 0; background: rgba(0,0,0,0.72); animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-card { position: relative; width: 100%; max-width: 560px; background: #141414; border: 1px solid rgba(255,255,255,0.09); border-radius: 30px 30px 0 0; padding: 28px 22px calc(28px + env(safe-area-inset-bottom, 0px)); animation: sheetUp .32s var(--ease); }
+    @keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-card h3 { font-size: 1.24rem; font-weight: 500; margin-bottom: 10px; }
+    .modal-card p { font-size: .92rem; color: #b4b4b4; line-height: 1.55; }
+    .modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
+    .m-btn { width: 100%; padding: 16px; border-radius: 999px; font-size: .98rem; font-weight: 500; background: rgba(255,255,255,0.08); transition: transform .14s ease, opacity .2s; }
+    .m-btn:active { transform: scale(.98); }
+    .m-btn.primary { background: #fff; color: #000; }
+    .m-btn.danger { background: rgba(232,97,90,0.14); color: var(--red); border: 1px solid rgba(232,97,90,0.3); }
+    .m-btn.ghost { background: transparent; color: var(--muted); }
+    .summary-box { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 16px; margin-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+    .summary-row { display: flex; justify-content: space-between; font-size: .9rem; }
+    .summary-row span:first-child { color: var(--muted); }
+    .summary-row span:last-child { font-weight: 500; color: #fff; text-align: right; max-width: 60%; }
+    .toast { position: fixed; left: 50%; bottom: 118px; transform: translate(-50%, 20px); background: #fff; color: #000; padding: 13px 22px; border-radius: 999px; font-size: .9rem; font-weight: 500; z-index: 600; opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .3s var(--ease); max-width: calc(100vw - 40px); text-align: center; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* NEW: input style for modals like Change password */
+    .field { width: 100%; padding: 15px 20px; border-radius: 999px; background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.16); color: #fff; font-size: 1rem; outline: none; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); transition: border-color .2s, background .2s; }
+    .field:focus { border-color: #fff; background: rgba(0,0,0,0.6); }
+    .field::placeholder { color: #707070; }
+
+    .card { transition: transform .45s var(--ease), box-shadow .45s var(--ease), filter .3s ease; }
+    .badge { transition: transform .45s var(--ease); }
+    .pill { transition: color .2s, border-color .2s, background .2s, transform .35s var(--ease); }
+    .round-btn { transition: transform .35s var(--ease), background .2s, border-color .2s; }
+    .heart { transition: transform .35s var(--ease), background .2s, color .2s; }
+    .subject { transition: color .18s, border-color .18s, background .18s, transform .35s var(--ease); }
+    .stepper button { transition: background .18s, transform .3s var(--ease); }
+    .seg button { transition: color .18s, background .18s, transform .3s var(--ease); }
+    .start-btn { transition: transform .4s var(--ease), box-shadow .4s var(--ease), opacity .2s; }
+    .start-btn svg { transition: transform .4s var(--ease); }
+    .m-btn { transition: transform .3s var(--ease), background .2s, opacity .2s; }
+    .menu-item { transition: opacity .18s, transform .35s var(--ease), background .2s; border-radius: 14px; }
+    .nav-item { transition: color .2s, background .2s, transform .35s var(--ease); }
+    .fab { transition: transform .4s var(--ease), box-shadow .4s var(--ease), border-color .2s; }
+    .stat { transition: transform .4s var(--ease), border-color .25s, background .25s; }
+    .tasks li { transition: opacity .2s, transform .35s var(--ease), background .2s; }
+    .card.saved .heart svg { animation: heartPop .5s var(--ease); }
+    @keyframes heartPop { 0% { transform: scale(.4); } 55% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+    @media (hover: hover) and (pointer: fine) {
+      .card:hover { transform: translateY(-5px) scale(1.012); box-shadow: 0 22px 38px -14px rgba(0,0,0,0.65); filter: brightness(1.04); }
+      .card:hover .badge { transform: rotate(-8deg) scale(1.1); }
+      .heart:hover { transform: scale(1.14); background: rgba(0,0,0,0.18); }
+      .round-btn:hover { transform: scale(1.08); border-color: rgba(255,255,255,0.28); }
+      .pill:not(.active):hover { color: #fff; border-color: rgba(255,255,255,0.5); transform: translateY(-2px); }
+      .subject:not(.on):hover { color: #fff; border-color: rgba(255,255,255,0.5); transform: translateY(-2px); }
+      .stepper button:not(:disabled):hover { background: rgba(255,255,255,0.1); transform: scale(1.08); }
+      .seg button:not(.on):hover { color: #fff; background: rgba(255,255,255,0.07); }
+      .start-btn:hover { transform: translateY(-3px); box-shadow: 0 16px 34px -10px rgba(235,118,80,0.6); }
+      .start-btn:hover svg { transform: translateX(4px) scale(1.1); }
+      .m-btn:hover { background: rgba(255,255,255,0.14); transform: translateY(-2px); }
+      .m-btn.primary:hover { background: #ececec; }
+      .menu-item:hover { background: rgba(255,255,255,0.04); transform: translateX(4px); }
+      .nav-item:not(.active):hover { color: #fff; background: rgba(255,255,255,0.07); transform: translateY(-2px); }
+      .fab:hover { transform: translateY(-3px) scale(1.06); border-color: rgba(255,255,255,0.45); box-shadow: 0 14px 32px rgba(0,0,0,0.75); }
+      .stat:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.18); background: rgba(24,24,24,0.9); }
+      .tasks li:hover { background: rgba(0,0,0,0.2); transform: translateX(3px); }
+    }
+
+    .card:active { transform: scale(0.965); filter: brightness(0.97); transition-duration: .12s; }
+    .heart:active { transform: scale(0.8); }
+    .round-btn:active { transform: scale(0.88); }
+    .pill:active { transform: scale(0.93); }
+    .subject:active { transform: scale(0.94); }
+    .stepper button:not(:disabled):active { transform: scale(0.85); }
+    .seg button:active { transform: scale(0.94); }
+    .start-btn:active { transform: scale(0.96); box-shadow: none; transition-duration: .1s; }
+    .m-btn:active { transform: scale(0.97); }
+    .menu-item:active { transform: scale(0.98); opacity: .8; }
+    .nav-item:active { transform: scale(0.86); }
+    .fab:active { transform: scale(0.9); }
+    .stat:active { transform: scale(0.97); }
+    .tasks li:active { transform: scale(0.97); }
+
+    .trial-banner { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px 11px 11px; border-radius: 999px; background: rgba(29,207,159,0.12); border: 1px solid rgba(29,207,159,0.38); margin-bottom: 14px; text-align: left; transition: transform .35s var(--ease), background .2s; }
+    .trial-banner[hidden] { display: none; }
+    .trial-banner .tb-ic { width: 34px; height: 34px; border-radius: 50%; background: #1DCF9F; color: #04281f; display: grid; place-items: center; flex-shrink: 0; }
+    .trial-banner .tb-ic svg { width: 17px; height: 17px; }
+    .trial-banner .tb-text { flex: 1; min-width: 0; font-size: .9rem; line-height: 1.25; }
+    .trial-banner .tb-cta { font-size: .78rem; font-weight: 600; padding: 8px 14px; border-radius: 999px; background: #fff; color: #000; flex-shrink: 0; }
+    .trial-banner.locked { background: rgba(232,97,90,0.12); border-color: rgba(232,97,90,0.45); }
+    .trial-banner.locked .tb-ic { background: #E8615A; color: #fff; }
+    .trial-banner.warn { background: rgba(248,203,74,0.12); border-color: rgba(248,203,74,0.4); }
+    .trial-banner.warn .tb-ic { background: #F8CB4A; color: #2a2000; }
+    .trial-banner:active { transform: scale(.98); }
+    @media (hover: hover) and (pointer: fine) { .trial-banner:hover { transform: translateY(-2px); background: rgba(29,207,159,0.18); } }
+
+    .upg { position: fixed; inset: 0; z-index: 1500; overflow-y: auto; overscroll-behavior: contain; padding: calc(22px + env(safe-area-inset-top, 0px)) 18px 48px; background: radial-gradient(70% 38% at 92% 0%, rgba(29,207,159,0.30), transparent 70%), radial-gradient(80% 45% at 0% 100%, rgba(235,118,80,0.24), transparent 70%), #020305; animation: upgIn .45s var(--ease); }
+    .upg[hidden] { display: none; }
+    @keyframes upgIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+    .upg-inner { max-width: 560px; margin: 0 auto; }
+    .upg-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+    .upg-head h2 { font-size: clamp(2.1rem, 10vw, 2.8rem); font-weight: 400; letter-spacing: -0.045em; line-height: 1.05; }
+    .upg .panel { margin-bottom: 14px; }
+
+    .pay-card { position: relative; border-radius: 34px; padding: 22px 20px 20px; color: #fff; overflow: hidden; margin-bottom: 14px;
+      background: radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,0.26), transparent 55%), radial-gradient(90% 80% at 0% 100%, rgba(0,70,52,0.95), transparent 62%), linear-gradient(145deg, #15dba5 0%, #0b9c74 48%, #066650 100%);
+      box-shadow: 0 34px 60px -26px rgba(29,207,159,0.6), inset 0 1px 0 rgba(255,255,255,0.4); animation: cardIn .7s var(--ease) backwards; }
+    @keyframes cardIn { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
+    .pay-card::before { content: ""; position: absolute; width: 380px; height: 380px; right: -170px; top: -190px; border-radius: 50%; border: 46px solid rgba(255,255,255,0.09); }
+    .pay-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255,255,255,0.2) 1px, transparent 1.5px); background-size: 14px 14px; -webkit-mask-image: linear-gradient(135deg, #000 0%, transparent 58%); mask-image: linear-gradient(135deg, #000 0%, transparent 58%); }
+    .pay-card > * { position: relative; z-index: 1; }
+    .pc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 26px; }
+    .opay-logo { height: 34px; width: auto; display: block; }
+    .pc-tag { font-size: .7rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; padding: 6px 12px; border-radius: 999px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.22); }
+    .pc-label { font-size: .84rem; opacity: .8; }
+    .pc-price { font-size: clamp(3rem, 15vw, 4rem); font-weight: 600; letter-spacing: -0.05em; line-height: 1.05; margin: 2px 0; }
+    .pc-sub { font-size: .9rem; opacity: .85; margin-bottom: 22px; }
+    .pc-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 14px 14px 18px; border-radius: 24px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.18); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); margin-bottom: 10px; }
+    .pc-row > div { min-width: 0; }
+    .pc-row span, .pc-meta span { display: block; font-size: .72rem; opacity: .75; margin-bottom: 3px; }
+    .pc-row b { display: block; font-size: 1.7rem; font-weight: 600; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+    .pc-row.small b { font-size: 1.15rem; letter-spacing: .08em; }
+    .pc-meta { display: flex; gap: 22px; padding: 2px 6px 14px; flex-wrap: wrap; }
+    .pc-meta b { font-size: .98rem; font-weight: 500; }
+    .pc-copy { width: 44px; height: 44px; border-radius: 50%; background: #fff; color: #066650; display: grid; place-items: center; flex-shrink: 0; transition: transform .3s var(--ease); }
+    .pc-copy svg { width: 18px; height: 18px; }
+    .pc-copy:active { transform: scale(.86); }
+    @media (hover: hover) and (pointer: fine) { .pc-copy:hover { transform: scale(1.1); } }
+
+    .steps { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+    .steps li { display: flex; gap: 14px; align-items: flex-start; font-size: .92rem; line-height: 1.45; color: #d4d4d4; }
+    .steps li i { width: 28px; height: 28px; border-radius: 50%; background: rgba(29,207,159,0.18); color: #1DCF9F; display: grid; place-items: center; font-style: normal; font-size: .82rem; font-weight: 600; flex-shrink: 0; }
+    .drop { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 140px; padding: 18px; border-radius: 26px; border: 1.5px dashed rgba(255,255,255,0.28); color: var(--muted); text-align: center; font-size: .92rem; cursor: pointer; overflow: hidden; transition: border-color .2s, background .2s, transform .35s var(--ease); }
+    .drop svg { width: 26px; height: 26px; }
+    .drop img { max-width: 100%; max-height: 260px; border-radius: 16px; display: block; }
+    .drop.has { border-style: solid; border-color: #1DCF9F; background: rgba(29,207,159,0.07); }
+    .drop:active { transform: scale(.98); }
+    @media (hover: hover) and (pointer: fine) { .drop:hover { border-color: #fff; color: #fff; } }
+    .upg .fld { width: 100%; padding: 16px 20px; border-radius: 999px; background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.16); color: #fff; font-size: 1rem; outline: none; margin: 12px 0 14px; }
+    .upg .fld:focus { border-color: #fff; }
+    .upg .fld::placeholder { color: #707070; }
+    .done-panel { text-align: center; padding: 34px 22px; }
+    .done-ic { width: 72px; height: 72px; border-radius: 50%; background: rgba(29,207,159,0.16); color: #1DCF9F; display: grid; place-items: center; margin: 0 auto 18px; animation: pop .6s var(--ease); }
+    .done-ic svg { width: 34px; height: 34px; }
+    @keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+    .done-panel h3 { font-size: 1.4rem; font-weight: 500; margin-bottom: 8px; letter-spacing: -0.02em; }
+    .done-panel p { color: #b4b4b4; line-height: 1.55; font-size: .94rem; }
+    .reject-note { padding: 14px 16px; border-radius: 22px; background: rgba(232,97,90,0.12); border: 1px solid rgba(232,97,90,0.35); color: #f0a09b; font-size: .9rem; line-height: 1.45; margin-bottom: 14px; }
+    .prem-note { padding: 14px 16px; border-radius: 22px; background: rgba(248,203,74,0.12); border: 1px solid rgba(248,203,74,0.35); color: #F8CB4A; font-size: .9rem; margin-bottom: 14px; }
+
+    .no-icons .nav-item { width: auto; padding: 0 12px; border-radius: 24px; font-size: .7rem; }
     .no-icons .nav-item::after { content: attr(aria-label); }
-    .no-icons .fab::after { content: "+"; font-size: 2rem; line-height: 1; }
-    .no-icons .heart::after { content: "\2665"; font-size: 1.1rem; }
+    .no-icons .fab::after { content: "+"; font-size: 1.9rem; line-height: 1; }
+    .no-icons .heart::after { content: "\2665"; font-size: 1.05rem; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+      .glow { animation: none; } .flame { animation: none; }
+    }
+    @media (max-width: 360px) {
+      .streak-num { font-size: 5.6rem; }
+      .ring { width: 96px; height: 96px; }
+      .ring-meta .big { font-size: 2.3rem; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- INTRO SPLASH -->
   <div id="splash" aria-hidden="true">
-    <div class="splash-glow"></div>
-    <div class="splash-dots"></div>
+    <div class="splash-glow"></div><div class="splash-dots"></div>
     <div class="splash-row">
       <span class="splash-spin">
         <svg class="splash-logo" viewBox="0 0 2333 2916" fill="currentColor" fill-rule="evenodd">
@@ -439,26 +423,28 @@
     </div>
   </div>
 
-  <!-- ANIMATED GLOW BACKGROUND -->
   <div class="bg" aria-hidden="true">
-    <div class="glow g-blue"></div>
-    <div class="glow g-arc"></div>
-    <div class="glow g-orange"></div>
-    <div class="glow g-deep"></div>
+    <div class="glow g-blue"></div><div class="glow g-orange"></div><div class="glow g-deep"></div>
   </div>
 
   <div class="page-container">
-
-    <!-- ================= HOME ================= -->
     <section id="home" class="page active">
-      <header class="top-header">
-        <h1>My<br/>Dashboard</h1>
-        <button class="round-btn" data-go="profile" aria-label="Open profile">
-          <span class="dots"><i></i><i></i><i></i><i></i></span>
-        </button>
+      <header class="top-header stagger" style="--i:0">
+        <div style="min-width:0">
+          <p class="eyebrow" id="greet-hi">Good evening</p>
+          <h1 class="greet-name" id="greet-name">Student</h1>
+          <p class="greet-sub" id="greet-sub">Let's get a session in.</p>
+        </div>
+        <button class="round-btn" data-go="profile" aria-label="Open profile"><span class="dots"><i></i><i></i><i></i><i></i></span></button>
       </header>
 
-      <div class="filter-pills" id="pills">
+      <button class="trial-banner stagger" id="trial-banner" style="--i:1" hidden>
+        <span class="tb-ic"><i data-lucide="sparkles"></i></span>
+        <span class="tb-text" id="tb-text"></span>
+        <span class="tb-cta" id="tb-cta">Upgrade</span>
+      </button>
+
+      <div class="filter-pills stagger" id="pills" style="--i:1">
         <button class="pill active" data-filter="all">All <span class="count">0</span></button>
         <button class="pill" data-filter="streaks">Streaks <span class="count">0</span></button>
         <button class="pill" data-filter="exams">Exams <span class="count">0</span></button>
@@ -466,126 +452,241 @@
       </div>
 
       <div class="grid" id="cards">
-
-        <article class="card tall c-orange" data-cat="streaks">
+        <article class="card tall c-orange stagger" data-id="plan" data-cat="streaks" style="--i:2">
           <div class="card-head">
-            <h3>Plan for<br/>the Day</h3>
+            <div><h3>Plan for<br/>the Day</h3><p class="sub" id="plan-count">1 of 3 done</p></div>
             <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
           </div>
-          <ul class="tasks">
-            <li class="done"><span class="chk"></span>10 Math Qs</li>
-            <li><span class="chk"></span>20 Vocab</li>
-            <li><span class="chk"></span>Review</li>
-          </ul>
+          <ul class="tasks" id="task-list"></ul>
         </article>
 
-        <article class="card tall streak" data-cat="streaks">
+        <article class="card tall streak stagger" data-id="streak" data-cat="streaks" style="--i:3">
           <div class="card-head">
-            <div>
-              <h3>Day<br/>Streak</h3>
-              <p class="sub">Updated 2h ago</p>
-            </div>
+            <div><h3>Day<br/>Streak</h3><p class="sub"><i data-lucide="flame" class="flame" style="width:12px;height:12px;vertical-align:-1px"></i> keep it alive</p></div>
             <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
           </div>
           <div>
-            <div class="streak-num">7</div>
-            <div class="week">
-              <div class="on"><b></b>M</div>
-              <div class="on"><b></b>T</div>
-              <div class="on"><b></b>W</div>
-              <div class="on"><b></b>T</div>
-              <div class="on"><b></b>F</div>
-              <div class="on"><b></b>S</div>
-              <div><b></b>S</div>
-            </div>
+            <div class="streak-num" id="streak-num">0</div>
+            <div class="week" id="streak-week"></div>
           </div>
         </article>
 
-        <article class="card wide c-cream" data-cat="exams">
-          <div class="badge"><i data-lucide="atom"></i></div>
+        <article class="card wide c-blue stagger" data-id="challenge" data-cat="streaks" style="--i:4">
+          <div class="badge"><i data-lucide="trophy"></i></div>
           <div class="text">
-            <p class="eyebrow">Recommended</p>
-            <h3>Physics: Mechanics</h3>
+            <p class="eyebrow-dark" id="challenge-count">0 of 2 done</p>
+            <h3>Weekly Challenge</h3>
+            <div class="mini-bar"><div id="challenge-bar"></div></div>
           </div>
           <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
         </article>
 
-        <article class="card wide c-green" data-cat="exams">
+        <article class="card wide c-cream stagger" data-id="rec" data-cat="exams" style="--i:5">
+          <div class="badge"><i data-lucide="atom"></i></div>
+          <div class="text">
+            <p class="eyebrow-dark" id="rec-eyebrow">Recommended for you</p>
+            <h3 id="rec-title">Physics: Mechanics</h3>
+          </div>
+          <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
+        </article>
+
+        <article class="card wide c-green stagger" data-id="mock" data-cat="exams" style="--i:6">
           <div class="badge"><i data-lucide="target"></i></div>
           <div class="text">
-            <p class="eyebrow">40 Qs &bull; 30 Mins</p>
+            <p class="eyebrow-dark">40 Qs &bull; 30 Mins</p>
             <h3>Take a Full Mock</h3>
           </div>
           <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
         </article>
-
-        <article class="card wide c-blue" data-cat="streaks">
-          <div class="badge"><i data-lucide="trophy"></i></div>
-          <div class="text">
-            <p class="eyebrow">1 of 2 done</p>
-            <h3>Weekly Challenge</h3>
-          </div>
-          <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
-        </article>
-
       </div>
 
       <p class="empty" id="empty" hidden>Nothing here yet.<br/>Tap the heart on a card to save it.</p>
+      
+      <div class="panel stagger" style="--i:7; margin-top:16px; background:transparent; border:1px dashed rgba(255,255,255,0.15); text-align:center; padding:20px;">
+        <p style="font-size:.85rem; color:var(--muted);">"Small daily improvements are the key to staggering long-term results."</p>
+        <p style="font-size:.7rem; color:#444; margin-top:8px; text-transform:uppercase; letter-spacing:.05em;">Stride Tip of the Day</p>
+      </div>
     </section>
 
-    <!-- ================= PRACTICE ================= -->
     <section id="practice" class="page">
       <header class="top-header"><h1>Practice</h1></header>
 
-      <div class="grid">
-        <article class="card wide c-cream">
-          <div class="badge"><i data-lucide="sigma"></i></div>
-          <div class="text"><p class="eyebrow">20 Questions</p><h3>Algebra Quiz</h3></div>
-        </article>
-        <article class="card wide c-yellow">
-          <div class="badge"><i data-lucide="book-open"></i></div>
-          <div class="text"><p class="eyebrow">15 Questions</p><h3>Synonyms Test</h3></div>
-        </article>
-        <article class="card wide c-green">
-          <div class="badge"><i data-lucide="target"></i></div>
-          <div class="text"><p class="eyebrow">40 Qs &bull; 30 Mins</p><h3>Full Mock Exam</h3></div>
-        </article>
+      <div class="panel stagger" style="--i:0">
+        <div class="panel-head"><h3>Subjects</h3><small id="course-label">Your course</small></div>
+        <div class="subject-grid" id="subject-grid"></div>
+      </div>
+
+      <div class="panel stagger" style="--i:1">
+        <h3>Session setup</h3>
+        <div class="field-row">
+          <div class="field-label">Questions<small>per session</small></div>
+          <div class="stepper">
+            <button id="q-minus" aria-label="Fewer questions"><i data-lucide="minus"></i></button>
+            <span class="val" id="q-val">20</span>
+            <button id="q-plus" aria-label="More questions"><i data-lucide="plus"></i></button>
+          </div>
+        </div>
+
+        <div class="field-row" style="flex-direction:column;align-items:stretch;gap:10px">
+          <div class="field-label">Difficulty</div>
+          <div class="seg" id="diff-seg">
+            <button data-diff="easy">Easy</button>
+            <button data-diff="medium" class="on">Medium</button>
+            <button data-diff="hard">Hard</button>
+          </div>
+        </div>
+
+        <div class="field-row" style="flex-direction:column;align-items:stretch;gap:10px">
+          <div class="field-label">Mode</div>
+          <div class="seg" id="mode-seg">
+            <button data-mode="practice" class="on">Practice</button>
+            <button data-mode="timed">Timed</button>
+            <button data-mode="mock">Mock</button>
+          </div>
+        </div>
+
+        <div class="field-row" id="time-config" style="flex-direction:column;align-items:stretch;gap:10px; display:none;">
+          <div class="field-label">Time limit</div>
+          <div class="seg" id="time-seg" style="grid-template-columns: repeat(4, 1fr);">
+            <button data-time="5">5m</button><button data-time="10">10m</button><button data-time="15" class="on">15m</button><button data-time="30">30m</button><button data-time="45">45m</button><button data-time="60">60m</button><button data-time="90">90m</button><button data-time="120">120m</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="start-btn stagger" id="start-btn" style="--i:2"><i data-lucide="play"></i> Review &amp; Start</button>
+
+      <div class="panel stagger" style="--i:3">
+        <div class="panel-head"><h3>Your mastery</h3><small>from recent tests</small></div>
+        <div id="mastery-list"></div>
       </div>
     </section>
 
-    <!-- ================= STATS ================= -->
     <section id="stats" class="page">
       <header class="top-header"><h1>Analytics</h1></header>
 
-      <div class="panel">
-        <h3>Overall Score</h3>
-        <div class="big">65%</div>
-        <div class="bar"><div style="width:65%"></div></div>
-        <div class="row"><span>Average: 65%</span><span>Goal: 80%</span></div>
+      <div class="panel stagger" style="--i:0">
+        <div class="ring-wrap">
+          <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+            <circle class="ring-fg" id="ring-fg" cx="60" cy="60" r="52"></circle>
+          </svg>
+          <div class="ring-meta">
+            <div class="big" id="overall-pct">0%</div>
+            <div class="delta" id="overall-delta"><i data-lucide="trending-up"></i> <span>+4% this week</span></div>
+            <div class="goal">Goal: 80%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-grid stagger" style="--i:1">
+        <div class="stat"><div class="k">Tests taken</div><div class="v" id="stat-tests">0</div></div>
+        <div class="stat"><div class="k">Questions answered</div><div class="v" id="stat-questions">0</div></div>
+        <div class="stat"><div class="k">Best score</div><div class="v" id="stat-best">0<small>%</small></div></div>
+        <div class="stat"><div class="k">Day streak</div><div class="v" id="stat-streak">0</div></div>
+      </div>
+
+      <div class="panel stagger" style="--i:2">
+        <div class="panel-head"><h3>Focus areas</h3><small>lowest scores</small></div>
+        <div id="focus-list"></div>
+      </div>
+
+      <div class="panel stagger" style="--i:3">
+        <div class="panel-head"><h3>Strongest</h3><small>keep it up</small></div>
+        <div id="strong-list"></div>
+      </div>
+
+      <div class="panel stagger" style="--i:4">
+        <div class="panel-head"><h3>Recent tests</h3><small id="recent-count"></small></div>
+        <div id="test-list"></div>
+      </div>
+
+      <div class="callout stagger" style="--i:5">
+        <div class="ic"><i data-lucide="lightbulb"></i></div>
+        <p id="insight">Take a few tests and your personalised insights will appear here.</p>
       </div>
     </section>
 
-    <!-- ================= PROFILE ================= -->
     <section id="profile" class="page">
       <header class="top-header"><h1>Profile</h1></header>
 
-      <div class="panel profile-card">
+      <div class="panel profile-card stagger" style="--i:0">
         <div class="avatar" id="profile-avatar">A</div>
         <h2 id="profile-name">Student</h2>
         <p class="mail" id="profile-email">email@example.com</p>
 
+        <div class="p-stats">
+          <div><div class="v" id="p-tests">0</div><div class="k">Tests</div></div>
+          <div><div class="v" id="p-streak">0</div><div class="k">Streak</div></div>
+          <div><div class="v" id="p-score">0%</div><div class="k">Average</div></div>
+        </div>
+
         <div class="info">
           <div class="line"><span>Unique ID</span><span id="profile-id">STR-0000</span></div>
           <div class="line"><span>Course</span><span id="profile-course">Sciences</span></div>
+          <div class="line"><span>Member since</span><span id="profile-since">—</span></div>
+          <div class="line"><span>Community</span><span id="profile-community">—</span></div>
         </div>
-
-        <button class="logout" id="logout-btn">Log Out</button>
       </div>
-    </section>
 
+      <div class="panel stagger" style="--i:1">
+        <div class="menu">
+          <button class="menu-item" id="admin-btn">
+            <div class="menu-ic"><i data-lucide="shield"></i></div>
+            <div class="menu-body"><h4>Admin panel</h4><p>Manage the platform</p></div>
+            <span class="chev"><i data-lucide="chevron-right"></i></span>
+          </button>
+          <a class="menu-item" id="channel-btn" href="#" target="_blank" rel="noopener">
+            <div class="menu-ic"><i data-lucide="message-circle"></i></div>
+            <div class="menu-body"><h4>Join the channel</h4><p>Updates, tips &amp; new features</p></div>
+            <span class="chev"><i data-lucide="chevron-right"></i></span>
+          </a>
+          <button class="menu-item" id="help-btn">
+            <div class="menu-ic"><i data-lucide="life-buoy"></i></div>
+            <div class="menu-body"><h4>Help &amp; support</h4><p>Reach an admin</p></div>
+            <span class="chev"><i data-lucide="chevron-right"></i></span>
+          </button>
+          <button class="menu-item" id="plan-btn">
+            <div class="menu-ic"><i data-lucide="credit-card"></i></div>
+            <div class="menu-body"><h4>Subscription plan</h4><p id="plan-sub">Free trial</p></div>
+            <span class="tag-soon" id="plan-tag">Upgrade</span>
+          </button>
+          <button class="menu-item" id="password-btn">
+            <div class="menu-ic"><i data-lucide="key-round"></i></div>
+            <div class="menu-body"><h4>Change password</h4><p>Update your sign-in password</p></div>
+            <span class="chev"><i data-lucide="chevron-right"></i></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel stagger" style="--i:2">
+        <div class="menu">
+          <button class="menu-item danger" id="delete-btn">
+            <div class="menu-ic"><i data-lucide="trash-2"></i></div>
+            <div class="menu-body"><h4>Delete account</h4><p>Erase all data permanently</p></div>
+            <span class="chev"><i data-lucide="chevron-right"></i></span>
+          </button>
+          <button class="menu-item" id="logout-btn">
+            <div class="menu-ic"><i data-lucide="log-out"></i></div>
+            <div class="menu-body"><h4>Log out</h4><p>Sign out of this device</p></div>
+            <span class="chev"><i data-lucide="chevron-right"></i></span>
+          </button>
+        </div>
+      </div>
+
+      <p class="foot-note">Stride v1.0 &bull; Built for focus<br/><strong>Powered by JVR</strong></p>
+    </section>
   </div>
 
-  <!-- FLOATING DOCK -->
+  <div class="upg" id="upg" hidden role="dialog" aria-modal="true" aria-label="Upgrade to premium">
+    <div class="upg-inner">
+      <div class="upg-head">
+        <div style="min-width:0"><p class="eyebrow" id="upg-eyebrow">Stride Premium</p><h2 id="upg-title">Unlock everything</h2></div>
+        <button class="round-btn" id="upg-close" aria-label="Close"><i data-lucide="x"></i></button>
+      </div>
+      <div id="upg-body"></div>
+    </div>
+  </div>
+
   <nav class="dock" aria-label="Main">
     <div class="dock-inner">
       <button class="nav-item active" data-target="home" aria-label="Home"><i data-lucide="home"></i></button>
@@ -596,131 +697,787 @@
     </div>
   </nav>
 
+  <div class="modal" id="modal" hidden>
+    <div class="modal-back" data-close></div>
+    <div class="modal-card">
+      <h3 id="modal-title"></h3>
+      <p id="modal-body"></p>
+      <div class="modal-actions" id="modal-actions"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
   <script>
-    (function () {
-      const html = document.documentElement;
+  (function () {
+    'use strict';
 
-      // ---------- AUTH GUARD ----------
-      function toLogin() {
-        if (window.strideClearAuth) window.strideClearAuth();
-        html.style.visibility = 'hidden';
-        location.replace('index.html');
-      }
+    const SUPABASE_URL = 'https://kbbrovopcmywahcljudn.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_ommhdvmUlMnRJmvgCGduFQ_T85Ix9m7';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      function readUser() {
-        try { return JSON.parse(localStorage.getItem('stride_user')); } catch (e) { return null; }
-      }
+    const $  = (s, r = document) => r.querySelector(s);
+    const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+    const html = document.documentElement;
 
-      if (!window.strideSessionOk || !window.strideSessionOk()) { toLogin(); return; }
-      const user = readUser();
-      if (!user) { toLogin(); return; }
+    let currentUser = null;
+    let dbProfile = {};
+    let dbTests = [];
 
-      // Keep the session fresh (rolling 30 days)
-      function touch() { try { localStorage.setItem('stride_last_active', String(Date.now())); } catch (e) {} }
-      touch();
+    let access = { has_access: true };
+    let accessAt = 0;
+    let receiptBlob = null;
+    const naira = n => '₦' + Number(n || 0).toLocaleString();
+    const escH = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const myRef = () => 'STR-' + currentUser.id.replace(/-/g, '').slice(0, 5).toUpperCase();
+    const daysLeft = ts => Math.max(0, Math.ceil((new Date(ts).getTime() - Date.now()) / 86400000));
+    const OPAY_LOGO = '<svg class="opay-logo" viewBox="0 0 112 36" aria-label="OPay"><circle cx="18" cy="18" r="17" fill="#fff"/><circle cx="18" cy="18" r="8" fill="none" stroke="#0B9C74" stroke-width="5.5"/><text x="43" y="26" font-family="Outfit, sans-serif" font-size="24" font-weight="700" fill="#fff" letter-spacing="-0.5">OPay</text></svg>';
 
-      // Callbacks: restored from back/forward cache, logged out in another tab, returning to the tab
-      window.addEventListener('pageshow', e => { if (e.persisted && !window.strideSessionOk()) toLogin(); });
-      window.addEventListener('storage', e => { if (e.key === 'stride_user' && !e.newValue) toLogin(); });
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          if (!window.strideSessionOk()) toLogin(); else touch();
-        }
-      });
+    async function loadAccess() {
+      try {
+        const { data, error } = await supabase.rpc('my_access');
+        access = (!error && data) ? data : { has_access: true };
+      } catch (e) { access = { has_access: true }; }
+      accessAt = Date.now();
+    }
+    function requireAccess() {
+      if (access.has_access) return true;
+      openUpgrade();
+      return false;
+    }
 
-      window.logout = function () {
-        if (window.strideClearAuth) window.strideClearAuth();
-        location.replace('index.html');
-      };
-      document.getElementById('logout-btn').addEventListener('click', window.logout);
-
-      // ---------- PROFILE ----------
-      const name = (user.name || 'Student').toString();
-      document.getElementById('profile-name').textContent = name;
-      document.getElementById('profile-avatar').textContent = name.charAt(0).toUpperCase();
-      document.getElementById('profile-email').textContent = user.email || '';
-      document.getElementById('profile-id').textContent = user.id || 'STR-0000';
-      document.getElementById('profile-course').textContent = user.course || 'Sciences';
-
-      // ---------- ICONS (with fallback) ----------
-      if (window.lucide) { lucide.createIcons(); } else { html.classList.add('no-icons'); }
-
-      // ---------- INTRO SPLASH (plays on every open / refresh) ----------
-      const splash = document.getElementById('splash');
-      function endSplash() {
-        if (!splash || splash.dataset.done) return;
-        splash.dataset.done = '1';
-        splash.classList.add('leaving');
-        html.classList.add('revealed');
-        setTimeout(() => splash.remove(), 600);
-      }
-      if (splash) {
-        setTimeout(endSplash, 3400);
-        splash.addEventListener('click', endSplash); // tap to skip
+    function renderAccess() {
+      const banner = $('#trial-banner');
+      if (!banner) return;
+      let text = '', cta = 'Upgrade', cls = '', show = true, tag = 'Upgrade', sub = 'Free trial';
+      if (access.premium) {
+        const left = access.lifetime ? 999 : daysLeft(access.premium_until);
+        sub = access.lifetime ? 'Premium · lifetime' : 'Premium · until ' + fmtDate(access.premium_until);
+        tag = 'Premium';
+        if (!access.lifetime && left <= 5) { text = `Premium ends in ${left} day${left === 1 ? '' : 's'}`; cta = 'Renew'; cls = 'warn'; }
+        else show = false;
+      } else if (access.has_access) {
+        const left = daysLeft(access.trial_ends_at);
+        text = `Free trial · ${left} day${left === 1 ? '' : 's'} left`;
+        sub = text;
       } else {
-        html.classList.add('revealed');
+        text = 'Free trial ended. Unlock practice.'; cta = 'Unlock'; cls = 'locked'; sub = 'Trial ended'; tag = 'Unlock';
+      }
+      if (access.last_status === 'pending') { text = 'Receipt received. Awaiting approval.'; cta = 'View'; cls = ''; sub = 'Awaiting approval'; tag = 'Pending'; show = true; }
+      banner.hidden = !show;
+      banner.className = 'trial-banner stagger ' + cls;
+      $('#tb-text').textContent = text;
+      $('#tb-cta').textContent = cta;
+      const ps = $('#plan-sub'), pt = $('#plan-tag');
+      if (ps) ps.textContent = sub;
+      if (pt) pt.textContent = tag;
+      const sbtn = $('#start-btn');
+      if (sbtn) { sbtn.innerHTML = access.has_access ? '<i data-lucide="play"></i> Review &amp; Start' : '<i data-lucide="lock"></i> Unlock to start'; icons(); }
+    }
+
+    function compressImage(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const max = 1400;
+          const r = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+          const w = Math.round(img.naturalWidth * r), h = Math.round(img.naturalHeight * r);
+          const c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          c.toBlob(b => b ? resolve(b) : reject(new Error('compress')), 'image/jpeg', 0.72);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image')); };
+        img.src = url;
+      });
+    }
+
+    function renderUpgrade() {
+      const a = access, ref = myRef();
+      const root = $('#upg-body');
+      const pending = a.last_status === 'pending';
+      $('#upg-title').textContent = a.premium ? 'You are premium' : (a.has_access ? 'Unlock everything' : 'Your trial has ended');
+      $('#upg-eyebrow').textContent = a.premium ? (a.lifetime ? 'Lifetime access' : 'Active until ' + fmtDate(a.premium_until)) : 'Stride Premium';
+
+      if (!a.account_number) {
+        root.innerHTML = '<div class="panel done-panel"><h3>Payments are not open yet</h3><p>Please check back soon.</p></div>';
+        return;
       }
 
-      // ---------- TABS ----------
-      const navBtns = document.querySelectorAll('.nav-item');
-      const pages = document.querySelectorAll('.page');
+      const card = `<div class="pay-card">
+        <div class="pc-top">${OPAY_LOGO}<span class="pc-tag">Bank transfer</span></div>
+        <p class="pc-label">Send exactly</p>
+        <div class="pc-price">${naira(a.price)}</div>
+        <p class="pc-sub">${a.premium_days} days of full access</p>
+        <div class="pc-row"><div><span>Account number</span><b>${escH(a.account_number)}</b></div>
+          <button class="pc-copy" data-copy="${escH(a.account_number)}" data-what="Account number" aria-label="Copy account number"><i data-lucide="copy"></i></button></div>
+        <div class="pc-meta"><div><span>Bank</span><b>${escH(a.bank_name || 'OPay')}</b></div>${a.account_name ? `<div><span>Account name</span><b>${escH(a.account_name)}</b></div>` : ''}</div>
+        <div class="pc-row small"><div><span>Put this in the narration</span><b>${ref}</b></div>
+          <button class="pc-copy" data-copy="${ref}" data-what="Reference" aria-label="Copy reference"><i data-lucide="copy"></i></button></div>
+      </div>`;
 
-      function goTo(id) {
-        if (document.getElementById(id).classList.contains('active')) return;
-        navBtns.forEach(b => b.classList.toggle('active', b.dataset.target === id));
-        pages.forEach(p => p.classList.toggle('active', p.id === id));
-        window.scrollTo({ top: 0 });
+      let lower = '';
+      if (pending) {
+        lower = `<div class="panel done-panel"><div class="done-ic"><i data-lucide="check"></i></div>
+          <h3>Great, we have your receipt</h3>
+          <p>Your registration will be completed shortly. You will get full access as soon as the payment is confirmed.</p>
+          <button class="start-btn" id="upg-refresh" style="margin-top:22px"><i data-lucide="refresh-cw"></i> Check status</button></div>`;
+      } else {
+        const note = a.last_status === 'rejected' ? `<div class="reject-note"><b>Your last receipt was not accepted.</b>${a.last_note ? '<br>' + escH(a.last_note) : ''}<br>Please send a new one below.</div>` : '';
+        const prem = a.premium ? `<div class="prem-note">You already have premium. A new payment adds ${a.premium_days} more days on top.</div>` : '';
+        lower = `${note}${prem}
+          <div class="panel"><h3 style="margin-bottom:16px">How it works</h3>
+            <ol class="steps">
+              <li><i>1</i><span>Transfer <b>${naira(a.price)}</b> to the account above using any bank app.</span></li>
+              <li><i>2</i><span>Add <b>${ref}</b> as the narration so we can find you fast.</span></li>
+              <li><i>3</i><span>Upload your receipt screenshot and tap submit.</span></li>
+            </ol></div>
+          <div class="panel"><h3 style="margin-bottom:14px">Upload your receipt</h3>
+            <label class="drop" id="drop" for="rc-file"><i data-lucide="image-plus"></i><span id="drop-txt">Tap to choose a screenshot</span></label>
+            <input type="file" id="rc-file" accept="image/*" hidden>
+            <input class="fld" id="rc-name" placeholder="Name on the transfer (optional)" maxlength="60" autocomplete="off">
+            <button class="start-btn" id="rc-submit"><i data-lucide="send"></i> Submit receipt</button></div>`;
       }
+      root.innerHTML = card + lower;
+      icons();
 
-      navBtns.forEach(btn => btn.addEventListener('click', () => goTo(btn.dataset.target)));
-      document.getElementById('fab').addEventListener('click', () => goTo('practice'));
-      document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => goTo(b.dataset.go)));
-
-      // ---------- HOME: FILTERS, HEARTS, TASKS ----------
-      const cards = [...document.querySelectorAll('#cards .card')];
-      const pills = [...document.querySelectorAll('.pill')];
-      const emptyMsg = document.getElementById('empty');
-      let currentFilter = 'all';
-
-      function matches(card, f) {
-        if (f === 'all') return true;
-        if (f === 'saved') return card.classList.contains('saved');
-        return card.dataset.cat === f;
-      }
-
-      function render() {
-        let shown = 0;
-        cards.forEach(c => {
-          const ok = matches(c, currentFilter);
-          c.hidden = !ok;
-          if (ok) shown++;
-        });
-        emptyMsg.hidden = shown > 0;
-        pills.forEach(p => {
-          p.classList.toggle('active', p.dataset.filter === currentFilter);
-          p.querySelector('.count').textContent = cards.filter(c => matches(c, p.dataset.filter)).length;
-        });
-      }
-
-      pills.forEach(p => p.addEventListener('click', () => {
-        currentFilter = p.dataset.filter;
-        render();
+      $$('.pc-copy', root).forEach(b => b.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(b.dataset.copy); toast(b.dataset.what + ' copied'); }
+        catch (e) { toast('Long-press the number to copy it.'); }
       }));
-
-      cards.forEach(card => {
-        card.querySelector('.heart').addEventListener('click', e => {
-          e.stopPropagation();
-          card.classList.toggle('saved');
-          render();
+      const refresh = $('#upg-refresh');
+      if (refresh) refresh.addEventListener('click', async () => {
+        await loadAccess(); renderAccess(); renderUpgrade();
+        toast(access.last_status === 'pending' ? 'Still waiting for approval.' : (access.premium ? 'Premium is active!' : 'Status updated.'));
+      });
+      const file = $('#rc-file');
+      if (file) {
+        receiptBlob = null;
+        file.addEventListener('change', async () => {
+          const f = file.files && file.files[0];
+          if (!f) return;
+          const drop = $('#drop');
+          try {
+            receiptBlob = await compressImage(f);
+            const url = URL.createObjectURL(receiptBlob);
+            drop.classList.add('has');
+            drop.innerHTML = `<img src="${url}" alt="Receipt preview"><span>Tap to change</span>`;
+          } catch (e) { receiptBlob = null; toast('Please choose a screenshot (JPG or PNG).'); }
         });
+        $('#rc-submit').addEventListener('click', submitReceipt);
+      }
+    }
+
+    async function submitReceipt() {
+      if (!receiptBlob) return toast('Add your receipt screenshot first.');
+      const btn = $('#rc-submit');
+      btn.disabled = true; btn.style.opacity = '.6';
+      const path = `${currentUser.id}/${Date.now()}.jpg`;
+      const reset = () => { btn.disabled = false; btn.style.opacity = ''; };
+      const up = await supabase.storage.from('receipts').upload(path, receiptBlob, { contentType: 'image/jpeg' });
+      if (up.error) { reset(); return toast('Upload failed. Check your connection and try again.'); }
+      const name = ($('#rc-name').value || '').trim();
+      const ins = await supabase.from('payments').insert([{ user_id: currentUser.id, amount: access.price, sender_name: name || null, receipt_path: path }]);
+      if (ins.error) {
+        await supabase.storage.from('receipts').remove([path]);
+        reset();
+        return toast(ins.error.code === '23505' ? 'You already have a receipt waiting for approval.' : 'Could not submit. Please try again.');
+      }
+      access.last_status = 'pending'; access.last_note = null; receiptBlob = null;
+      renderUpgrade(); renderAccess();
+      $('#upg').scrollTo({ top: 0, behavior: 'smooth' });
+      toast('Receipt received!');
+    }
+
+    async function openUpgrade() {
+      const el = $('#upg');
+      el.hidden = false;
+      document.body.style.overflow = 'hidden';
+      el.scrollTop = 0;
+      renderUpgrade();
+      const before = JSON.stringify([access.last_status, access.premium, access.has_access]);
+      await loadAccess();
+      if (JSON.stringify([access.last_status, access.premium, access.has_access]) !== before) { renderUpgrade(); renderAccess(); }
+    }
+    function closeUpgrade() { $('#upg').hidden = true; document.body.style.overflow = ''; }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#upg').hidden) closeUpgrade(); });
+    document.addEventListener('visibilitychange', async () => {
+      if (document.hidden || Date.now() - accessAt < 15000 || !currentUser) return;
+      const wasPrem = access.premium;
+      await loadAccess(); renderAccess();
+      if (!$('#upg').hidden) renderUpgrade();
+      if (access.premium && !wasPrem) toast('Premium is active. Enjoy!');
+    });
+
+    function showSuspended(p) {
+      const until = p.suspended_until ? 'until ' + new Date(p.suspended_until).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : 'until an admin lifts it';
+      const safe = t => String(t || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+      const box = document.createElement('div');
+      box.style.cssText = 'position:fixed;inset:0;z-index:2000;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:32px;text-align:center';
+      box.innerHTML = '<h1 style="font-size:2.4rem;font-weight:400;letter-spacing:-0.04em">Account suspended</h1>' +
+        '<p style="color:#9a9a9a;max-width:30ch;line-height:1.5">Your access is paused ' + until + '.' + (p.suspend_reason ? '<br><br>Reason: ' + safe(p.suspend_reason) : '') + '</p>' +
+        '<button id="susp-out" style="margin-top:14px;padding:16px 34px;border-radius:999px;background:#EB7650;color:#1a0d06;font-weight:600;font-size:1rem">Log out</button>';
+      document.body.appendChild(box);
+      html.style.visibility = 'visible';
+      document.getElementById('susp-out').addEventListener('click', async () => { await supabase.auth.signOut(); toLogin(); });
+    }
+
+    async function showAnnouncement() {
+      try {
+        const { data, error } = await supabase.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false }).limit(1);
+        if (error || !data || !data.length) return;
+        const a = data[0];
+        if (localStorage.getItem('stride_seen_ann') === a.id) return;
+        const safe = t => String(t || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        setTimeout(() => openModal({
+          title: safe(a.title), body: safe(a.body),
+          actions: [{ label: 'Got it', style: 'primary', onClick: () => { try { localStorage.setItem('stride_seen_ann', a.id); } catch (e) {} } }]
+        }), 900);
+      } catch (e) {}
+    }
+
+    async function initApp() {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error || !session) {
+        return toLogin();
+      }
+
+      currentUser = session.user;
+      
+      const [profileRes, testsRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', currentUser.id).single(),
+        supabase.from('tests').select('*').eq('user_id', currentUser.id).order('date', { ascending: false })
+      ]);
+
+      if (profileRes.error || !profileRes.data) {
+        const defaultProfile = { id: currentUser.id, name: currentUser.email.split('@')[0], course: 'Sciences' };
+        await supabase.from('profiles').insert([defaultProfile]);
+        dbProfile = defaultProfile;
+      } else {
+        dbProfile = profileRes.data;
+      }
+
+      dbTests = testsRes.data || [];
+
+      // Self-heal: keep the super admin account permanently elevated
+      const SUPER_ADMIN_EMAIL = 'estdavid10@gmail.com';
+      if ((currentUser.email || '').toLowerCase() === SUPER_ADMIN_EMAIL && dbProfile.role !== 'admin') {
+        try {
+          const r = await supabase.from('profiles').update({ role: 'admin' }).eq('id', currentUser.id);
+          if (!r.error) dbProfile.role = 'admin';
+        } catch (e) { /* silent */ }
+      }
+
+      const suspended = dbProfile.status === 'suspended' &&
+        (!dbProfile.suspended_until || new Date(dbProfile.suspended_until) > new Date());
+      if (suspended) { showSuspended(dbProfile); return; }
+
+      await loadAccess();
+      html.style.visibility = 'visible';
+      renderAll();
+      icons();
+      showAnnouncement();
+    }
+
+    function toLogin() {
+      try { localStorage.removeItem('stride_user'); localStorage.removeItem('stride_last_active'); } catch (e) {}
+      html.style.visibility = 'hidden';
+      location.replace('index.html');
+    }
+
+    const reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    
+    function countUp(el, to, dur, suffix = '') {
+      dur = dur || 800;
+      if (reduceMotion()) { el.textContent = to + suffix; return; }
+      const start = performance.now();
+      (function tick(t) {
+        const p = Math.min(1, (t - start) / dur);
+        el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))) + suffix;
+        if (p < 1) requestAnimationFrame(tick);
+      })(start);
+    }
+
+    function fmtDate(ts) {
+      try { return new Date(ts).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); } 
+      catch (e) { return '—'; }
+    }
+
+    function pct(score, total) { return total ? Math.round((score / total) * 100) : 0; }
+
+    function icons() {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+      else html.classList.add('no-icons');
+    }
+
+    const toastEl = $('#toast');
+    let toastTimer = null;
+    function toast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2300);
+    }
+
+    const modalEl = $('#modal');
+    function openModal(opts) {
+      $('#modal-title').textContent = opts.title || '';
+      $('#modal-body').innerHTML = opts.body || '';
+      const wrap = $('#modal-actions');
+      wrap.innerHTML = '';
+      (opts.actions || []).forEach(a => {
+        const b = document.createElement('button');
+        b.className = 'm-btn ' + (a.style || '');
+        b.textContent = a.label;
+        b.addEventListener('click', () => { if (a.onClick) a.onClick(); if (a.close !== false) closeModal(); });
+        wrap.appendChild(b);
+      });
+      modalEl.hidden = false;
+    }
+    function closeModal() { modalEl.hidden = true; }
+    modalEl.addEventListener('click', e => { if (e.target.matches('[data-close]')) closeModal(); });
+
+    const splash = document.getElementById('splash');
+    let splashDone = false;
+    function endSplash() {
+      if (splashDone) return;
+      splashDone = true;
+      if (splash) splash.classList.add('leaving');
+      html.classList.add('revealed');
+      if (splash) setTimeout(() => splash.remove(), 480);
+      $('#home').classList.add('in');
+    }
+
+    const navBtns = $$('.nav-item');
+    const pages = $$('.page');
+    let activePage = 'home';
+
+    function animatePage(pageEl) {
+      if (!pageEl) return;
+      pageEl.classList.remove('in');
+      void pageEl.offsetWidth;
+      pageEl.classList.add('in');
+    }
+
+    function goTo(id) {
+      if (!document.getElementById(id) || id === activePage) return;
+      if (id === 'practice' && !access.has_access) { openUpgrade(); return; }
+      activePage = id;
+      navBtns.forEach(b => b.classList.toggle('active', b.dataset.target === id));
+      pages.forEach(p => p.classList.toggle('active', p.id === id));
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      animatePage(document.getElementById(id));
+      if (id === 'stats') runAnalyticsAnimations();
+    }
+
+    navBtns.forEach(b => b.addEventListener('click', () => goTo(b.dataset.target)));
+    $('#fab').addEventListener('click', () => goTo('practice'));
+    $$('[data-go]').forEach(b => b.addEventListener('click', () => goTo(b.dataset.go)));
+
+    let currentFilter = 'all';
+    const cards = $$('#cards .card');
+    const pills = $$('.pill');
+
+    function defaultTasks() {
+      return [
+        { id: 't1', label: '10 Math questions', done: false },
+        { id: 't2', label: '20 Vocab words',   done: false },
+        { id: 't3', label: 'Review notes',     done: false }
+      ];
+    }
+
+    function renderHome() {
+      const h = new Date().getHours();
+      $('#greet-hi').textContent = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+      
+      const name = dbProfile.name || currentUser.email.split('@')[0];
+      $('#greet-name').textContent = name.split(' ')[0];
+
+      const tasks = (dbProfile.tasks && dbProfile.tasks.length) ? dbProfile.tasks : defaultTasks();
+      const left = tasks.filter(x => !x.done).length;
+      $('#greet-sub').textContent = left === 0 ? 'All done for today — nice work.' : left + ' tasks left to close out today.';
+
+      const taskListEl = $('#task-list');
+      taskListEl.innerHTML = '';
+      tasks.forEach(task => {
+        const li = document.createElement('li');
+        li.className = task.done ? 'done' : '';
+        const chk = document.createElement('span');
+        chk.className = 'chk';
+        li.appendChild(chk);
+        li.appendChild(document.createTextNode(task.label));
+        
+        li.addEventListener('click', async () => {
+          const updatedTasks = tasks.map(t => t.id === task.id ? { ...t, done: !t.done } : t);
+          if (task.done) task.done = false; else task.done = true;
+          renderHome();
+          await supabase.from('profiles').update({ tasks: updatedTasks }).eq('id', currentUser.id);
+          dbProfile.tasks = updatedTasks;
+        });
+        taskListEl.appendChild(li);
+      });
+      $('#plan-count').textContent = tasks.filter(x => x.done).length + ' of ' + tasks.length + ' done';
+
+      const streak = dbProfile.streak_count || 0;
+      countUp($('#streak-num'), streak, 700);
+      const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+      const weekEl = $('#streak-week');
+      weekEl.innerHTML = '';
+      labels.forEach((l, i) => {
+        const d = document.createElement('div');
+        if (i < streak) d.className = 'on';
+        d.appendChild(Object.assign(document.createElement('b')));
+        d.appendChild(document.createTextNode(l));
+        weekEl.appendChild(d);
       });
 
-      document.querySelectorAll('.tasks li').forEach(li => {
-        li.addEventListener('click', () => li.classList.toggle('done'));
+      $('#challenge-count').textContent = '1 of 2 done';
+      $('#challenge-bar').style.width = '50%';
+
+      const saved = dbProfile.saved_cards || [];
+      cards.forEach(card => card.classList.toggle('saved', saved.includes(card.dataset.id)));
+      applyFilter();
+    }
+
+    function applyFilter() {
+      let shown = 0;
+      const saved = dbProfile.saved_cards || [];
+      cards.forEach(c => {
+        const cat = c.dataset.cat;
+        const ok = currentFilter === 'all' ? true : currentFilter === 'saved' ? saved.includes(c.dataset.id) : cat === currentFilter;
+        c.hidden = !ok;
+        if (ok) shown++;
+      });
+      $('#empty').hidden = shown > 0;
+
+      pills.forEach(p => {
+        p.classList.toggle('active', p.dataset.filter === currentFilter);
+        const f = p.dataset.filter;
+        const n = cards.filter(c => f === 'all' ? true : f === 'saved' ? saved.includes(c.dataset.id) : c.dataset.cat === f).length;
+        p.querySelector('.count').textContent = n;
+      });
+    }
+
+    pills.forEach(p => p.addEventListener('click', () => { currentFilter = p.dataset.filter; applyFilter(); }));
+
+    cards.forEach(card => {
+      const heart = card.querySelector('.heart');
+      if (!heart) return;
+      heart.addEventListener('click', async e => {
+        e.stopPropagation();
+        const id = card.dataset.id;
+        let saved = dbProfile.saved_cards || [];
+        if (saved.includes(id)) saved = saved.filter(x => x !== id);
+        else saved.push(id);
+        
+        dbProfile.saved_cards = saved;
+        renderHome();
+        toast(saved.includes(id) ? 'Saved to your list.' : 'Removed from saved.');
+        
+        await supabase.from('profiles').update({ saved_cards: saved }).eq('id', currentUser.id);
+      });
+    });
+
+    const SUBJECT_MAP = {
+      sciences: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Biology'],
+      arts: ['English', 'Literature', 'Government', 'History', 'CRS / IRS'],
+      commercial: ['Mathematics', 'English', 'Economics', 'Accounting', 'Commerce'],
+      engineering: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Further Maths'],
+      medicine: ['Biology', 'Chemistry', 'Physics', 'English', 'Mathematics'],
+      law: ['English', 'Literature', 'Government', 'History', 'CRS / IRS'],
+      technology: ['Mathematics', 'English', 'Physics', 'Computer Studies', 'Further Maths']
+    };
+
+    const userCourse = dbProfile.course || 'Sciences';
+    const courseKey = userCourse.toLowerCase().split(/[\s,/-]+/)[0];
+    const subjects = SUBJECT_MAP[courseKey] || SUBJECT_MAP['sciences'];
+
+    const practice = { selected: subjects.slice(0, 2), count: 20, diff: 'medium', mode: 'practice', time: 15 };
+    const Q_STEPS = [5, 10, 15, 20, 30, 40, 50];
+
+    function renderPractice() {
+      $('#course-label').textContent = userCourse;
+      const grid = $('#subject-grid');
+      grid.innerHTML = '';
+      subjects.forEach(s => {
+        const b = document.createElement('button');
+        b.className = 'subject' + (practice.selected.includes(s) ? ' on' : '');
+        b.innerHTML = `<span class="dot"></span>${s}`;
+        b.addEventListener('click', () => {
+          const i = practice.selected.indexOf(s);
+          if (i === -1) practice.selected.push(s); else practice.selected.splice(i, 1);
+          renderPractice();
+        });
+        grid.appendChild(b);
       });
 
-      render();
-    })();
+      const map = {};
+      dbTests.forEach(t => {
+        if (!map[t.subject]) map[t.subject] = { score: 0, total: 0 };
+        map[t.subject].score += t.score;
+        map[t.subject].total += t.total;
+      });
+      const keys = Object.keys(map).sort((a, b) => pct(map[b].score, map[b].total) - pct(map[a].score, map[a].total));
+      const list = $('#mastery-list');
+      
+      if (!keys.length) {
+        list.innerHTML = '<p style="color:var(--muted);font-size:.88rem">No tests yet — your mastery shows up here.</p>';
+      } else {
+        list.innerHTML = '';
+        keys.forEach(k => {
+          const p = pct(map[k].score, map[k].total);
+          list.innerHTML += `<div class="area"><div class="area-top"><span>${k}</span><span>${p}%</span></div><div class="area-bar ${p >= 70 ? 'good' : 'weak'}"><div style="width:${p}%"></div></div></div>`;
+        });
+      }
+    }
+
+    $('#q-minus').addEventListener('click', () => { const i = Q_STEPS.indexOf(practice.count); if (i > 0) { practice.count = Q_STEPS[i-1]; $('#q-val').textContent = practice.count; } });
+    $('#q-plus').addEventListener('click', () => { const i = Q_STEPS.indexOf(practice.count); if (i < Q_STEPS.length - 1) { practice.count = Q_STEPS[i+1]; $('#q-val').textContent = practice.count; } });
+    
+    $('#diff-seg').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      practice.diff = b.dataset.diff;
+      $$('button', $('#diff-seg')).forEach(x => x.classList.toggle('on', x === b));
+    });
+
+    $('#mode-seg').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      practice.mode = b.dataset.mode;
+      $$('button', $('#mode-seg')).forEach(x => x.classList.toggle('on', x === b));
+      $('#time-config').style.display = (practice.mode === 'timed' || practice.mode === 'mock') ? 'flex' : 'none';
+    });
+
+    $('#time-seg').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      practice.time = parseInt(b.dataset.time, 10);
+      $$('button', $('#time-seg')).forEach(x => x.classList.toggle('on', x === b));
+    });
+
+    $('#start-btn').addEventListener('click', async () => {
+      if (!requireAccess()) return;
+      if (!practice.selected.length) return toast('Pick at least one subject first.');
+      if (practice.count === 0) return toast('No questions available for this config.');
+
+      let timeHtml = (practice.mode === 'timed' || practice.mode === 'mock') ? `<div class="summary-row"><span>Time</span><span>${practice.time} mins</span></div>` : '';
+      
+      openModal({
+        title: 'Review Session',
+        body: `
+          <div class="summary-box">
+            <div class="summary-row"><span>Subjects</span><span>${practice.selected.join(', ')}</span></div>
+            <div class="summary-row"><span>Questions</span><span>${practice.count}</span></div>
+            <div class="summary-row"><span>Difficulty</span><span style="text-transform:capitalize">${practice.diff}</span></div>
+            <div class="summary-row"><span>Mode</span><span style="text-transform:capitalize">${practice.mode}</span></div>
+            ${timeHtml}
+          </div>
+          <p style="margin-top:16px;font-size:.85rem;color:var(--muted)">Ready to begin.</p>
+        `,
+        actions: [{ label: 'Start Now', style: 'primary', onClick: () => {
+           openModal({
+             title: 'Question Bank Empty',
+             body: 'The database has no questions yet. Would you like to simulate completing this session to test the database flow?',
+             actions: [{ label: 'Simulate Score', style: 'primary', onClick: async () => {
+                await supabase.from('tests').insert([{
+                  user_id: currentUser.id,
+                  subject: practice.selected[0],
+                  score: Math.floor(practice.count * 0.8),
+                  total: practice.count,
+                  mode: practice.mode
+                }]);
+                toast('Test saved to database!');
+                const { data } = await supabase.from('tests').select('*').eq('user_id', currentUser.id).order('date', { ascending: false });
+                dbTests = data || [];
+                renderAll();
+             }}]
+           });
+        }}]
+      });
+    });
+
+    function buildAnalytics() {
+      const totalScore = dbTests.reduce((a, t) => a + t.score, 0);
+      const totalMax   = dbTests.reduce((a, t) => a + t.total, 0);
+      const overall    = pct(totalScore, totalMax);
+      const best       = dbTests.reduce((a, t) => Math.max(a, pct(t.score, t.total)), 0);
+      
+      const map = {};
+      dbTests.forEach(t => {
+        if (!map[t.subject]) map[t.subject] = { score: 0, total: 0 };
+        map[t.subject].score += t.score;
+        map[t.subject].total += t.total;
+      });
+      const ordered = Object.keys(map).sort((a, b) => pct(map[a].score, map[a].total) - pct(map[b].score, map[b].total));
+      
+      return { overall, best, questions: totalMax, map, focus: ordered.slice(0, 3), strong: ordered.reverse().slice(0, 3) };
+    }
+
+    function renderAnalytics() {
+      const a = buildAnalytics();
+      $('#stat-tests').textContent = dbTests.length;
+      $('#stat-questions').textContent = a.questions;
+      $('#stat-best').innerHTML = a.best + '<small>%</small>';
+      $('#stat-streak').textContent = dbProfile.streak_count || 0;
+      $('#overall-pct').textContent = a.overall + '%';
+
+      const focusWrap = $('#focus-list');
+      focusWrap.innerHTML = a.focus.length ? '' : '<p style="color:var(--muted);font-size:.88rem">Take a test to unlock focus areas.</p>';
+      a.focus.forEach(k => {
+        const p = pct(a.map[k].score, a.map[k].total);
+        focusWrap.innerHTML += `<div class="area"><div class="area-top"><span>${k}</span><span>${p}%</span></div><div class="area-bar weak"><div style="width:${p}%"></div></div></div>`;
+      });
+
+      const strongWrap = $('#strong-list');
+      strongWrap.innerHTML = a.strong.length ? '' : '<p style="color:var(--muted);font-size:.88rem">Nothing yet.</p>';
+      a.strong.forEach(k => {
+        const p = pct(a.map[k].score, a.map[k].total);
+        strongWrap.innerHTML += `<div class="area"><div class="area-top"><span>${k}</span><span>${p}%</span></div><div class="area-bar good"><div style="width:${p}%"></div></div></div>`;
+      });
+
+      const list = $('#test-list');
+      $('#recent-count').textContent = dbTests.length + ' total';
+      list.innerHTML = dbTests.length ? '' : '<p style="color:var(--muted);font-size:.88rem">No tests recorded yet.</p>';
+      dbTests.slice(0, 6).forEach(t => {
+        const p = pct(t.score, t.total);
+        const cls = p >= 75 ? 'hi' : p >= 50 ? 'mid' : 'lo';
+        list.innerHTML += `
+          <div class="test-item">
+            <div class="test-icon ${cls}">${p}</div>
+            <div class="test-body"><h4>${t.subject}</h4><p>${t.mode} &bull; ${fmtDate(t.date)}</p></div>
+            <div style="font-size:.82rem;color:var(--muted);white-space:nowrap">${t.score}/${t.total}</div>
+          </div>
+        `;
+      });
+
+      $('#insight').innerHTML = a.focus.length 
+        ? `Your weakest area is <strong>${a.focus[0]}</strong> at ${pct(a.map[a.focus[0]].score, a.map[a.focus[0]].total)}%. A 20-question practice block there would lift your overall score the fastest.`
+        : 'Take a few tests and personalised insights will appear here.';
+    }
+
+    function runAnalyticsAnimations() {
+      const a = buildAnalytics();
+      countUp($('#overall-pct'), a.overall, 900, '%');
+      const ringFg = $('#ring-fg');
+      const RING_C = 2 * Math.PI * 52;
+      ringFg.style.transition = 'none';
+      ringFg.style.strokeDashoffset = RING_C;
+      void ringFg.getBoundingClientRect();
+      requestAnimationFrame(() => {
+        ringFg.style.transition = 'stroke-dashoffset 1.1s cubic-bezier(.16,1,.3,1)';
+        ringFg.style.strokeDashoffset = RING_C * (1 - a.overall / 100);
+      });
+    }
+
+    function renderProfile() {
+      const name = dbProfile.name || currentUser.email.split('@')[0];
+      $('#profile-name').textContent = name;
+      $('#profile-avatar').textContent = name.charAt(0).toUpperCase();
+      $('#profile-email').textContent = currentUser.email;
+      $('#profile-id').textContent = currentUser.id.split('-')[0].toUpperCase();
+      $('#profile-course').textContent = dbProfile.course || 'Sciences';
+      $('#profile-since').textContent = fmtDate(currentUser.created_at);
+      
+      const a = buildAnalytics();
+      $('#p-tests').textContent = dbTests.length;
+      $('#p-streak').textContent = dbProfile.streak_count || 0;
+      $('#p-score').textContent = a.overall + '%';
+      
+      $('#channel-btn').href = 'https://whatsapp.com/channel/REPLACE_WITH_YOUR_CHANNEL_LINK';
+    }
+
+    $('#admin-btn').addEventListener('click', () => location.href = 'admin.html');
+    
+    $('#help-btn').addEventListener('click', () => {
+      openModal({
+        title: 'Help & support',
+        body: 'Reach an admin for account issues.<br><br><strong>Admin Contact:</strong> 08129341178',
+        actions: [{ label: 'Message Admin', style: 'primary', onClick: () => location.href = 'https://wa.me/2348129341178' }]
+      });
+    });
+
+    $('#plan-btn').addEventListener('click', openUpgrade);
+
+    // NEW: Change password
+    $('#password-btn').addEventListener('click', () => {
+      openModal({
+        title: 'Change password',
+        body: `
+          <p style="margin-bottom:14px">Enter your current password, then choose a new one.</p>
+          <input class="field" id="pw-current" type="password" placeholder="Current password" autocomplete="current-password" style="margin-bottom:10px" />
+          <input class="field" id="pw-new" type="password" placeholder="New password (at least 6 characters)" autocomplete="new-password" style="margin-bottom:10px" />
+          <input class="field" id="pw-confirm" type="password" placeholder="Confirm new password" autocomplete="new-password" />
+        `,
+        actions: [
+          { label: 'Update password', style: 'primary', close: false, onClick: async () => {
+              const cur = $('#pw-current').value;
+              const nw  = $('#pw-new').value;
+              const cf  = $('#pw-confirm').value;
+              if (!cur) { toast('Enter your current password'); return; }
+              if (nw.length < 6) { toast('New password must be at least 6 characters'); return; }
+              if (nw !== cf) { toast('New passwords do not match'); return; }
+
+              const { error: verifyErr } = await supabase.auth.signInWithPassword({
+                email: currentUser.email,
+                password: cur
+              });
+              if (verifyErr) {
+                toast(/invalid login credentials/i.test(verifyErr.message) ? 'Current password is incorrect' : verifyErr.message);
+                return;
+              }
+
+              const { error: updErr } = await supabase.auth.updateUser({ password: nw });
+              if (updErr) { toast(updErr.message); return; }
+
+              closeModal();
+              toast('Password updated');
+            }
+          },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
+    });
+
+    $('#trial-banner').addEventListener('click', openUpgrade);
+    $('#upg-close').addEventListener('click', closeUpgrade);
+
+    $('#delete-btn').addEventListener('click', () => {
+      openModal({
+        title: 'Delete account?',
+        body: 'This permanently erases your profile and tests.',
+        actions: [{ label: 'Yes, delete', style: 'danger', onClick: async () => {
+          await supabase.from('tests').delete().eq('user_id', currentUser.id);
+          await supabase.from('profiles').delete().eq('id', currentUser.id);
+          await supabase.auth.signOut();
+          toLogin();
+        }}]
+      });
+    });
+
+    $('#logout-btn').addEventListener('click', async () => {
+      await supabase.auth.signOut();
+      toLogin();
+    });
+
+    function renderAll() {
+      renderAccess();
+      renderHome();
+      renderPractice();
+      renderAnalytics();
+      renderProfile();
+      icons();
+    }
+
+    initApp().then(() => {
+      if (splash && !html.classList.contains('no-intro')) {
+        setTimeout(endSplash, 2900);
+        splash.addEventListener('click', endSplash);
+      } else {
+        endSplash();
+      }
+    });
+
+  })();
   </script>
 </body>
 </html>
