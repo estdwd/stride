@@ -6,14 +6,27 @@
   <meta name="theme-color" content="#000000" />
   <title>Stride | App</title>
 
-  <!-- Hide page initially until Auth is verified -->
   <script>
     document.documentElement.style.visibility = 'hidden';
+    const SPLASH_KEY = 'stride_last_splash';
+    const SPLASH_INTERVAL = 30 * 60 * 1000; // 30 minutes
+    const lastSplash = localStorage.getItem(SPLASH_KEY);
+    if (!lastSplash || (Date.now() - Number(lastSplash) > SPLASH_INTERVAL)) {
+      localStorage.setItem(SPLASH_KEY, Date.now());
+    } else {
+      document.documentElement.classList.add('no-intro');
+    }
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -74,8 +87,9 @@
     .eyebrow { font-size: .8rem; font-weight: 400; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
     .greet-name { font-size: clamp(2.6rem, 13vw, 3.6rem); font-weight: 400; letter-spacing: -0.045em; line-height: 1.02; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .greet-sub { font-size: .92rem; color: var(--muted); margin-top: 8px; line-height: 1.4; max-width: 30ch; }
-    .round-btn { width: 48px; height: 48px; border-radius: 50%; background: rgba(22,22,22,0.92); border: 1px solid rgba(255,255,255,0.08); display: grid; place-items: center; flex-shrink: 0; margin-top: 2px; transition: transform .18s ease; }
+    .round-btn { position: relative; width: 48px; height: 48px; border-radius: 50%; background: rgba(22,22,22,0.92); border: 1px solid rgba(255,255,255,0.08); display: grid; place-items: center; flex-shrink: 0; margin-top: 2px; transition: transform .18s ease; }
     .round-btn:active { transform: scale(.93); }
+    .round-btn .badge-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--orange); border: 1.5px solid #141414; }
     .dots { display: grid; grid-template-columns: repeat(2, 4px); gap: 5px; }
     .dots i { width: 4px; height: 4px; border-radius: 50%; background: #fff; display: block; }
 
@@ -144,6 +158,7 @@
     .subject .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .5; }
     .subject.on { color: #fff; border-color: #fff; background: rgba(255,255,255,0.08); }
     .subject.on .dot { opacity: 1; background: var(--green); }
+    .subject.disabled { opacity: .35; pointer-events: none; text-decoration: line-through; }
 
     .stepper { display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.42); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; padding: 5px; }
     .stepper button { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: #fff; transition: background .18s, transform .14s; }
@@ -159,6 +174,21 @@
     .field-row + .field-row { margin-top: 18px; }
     .field-label { font-size: .92rem; color: #fff; font-weight: 400; }
     .field-label small { display: block; color: var(--muted); font-size: .76rem; margin-top: 2px; }
+    
+    /* Custom Select */
+    .input-group { position: relative; min-width: 120px; }
+    select.hidden-sel { display: none !important; }
+    .dd-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; border-radius: 999px; background: rgba(0,0,0,0.42); border: 1px solid rgba(255,255,255,0.08); font-size: .92rem; cursor: pointer; user-select: none; }
+    .dd-btn.placeholder { color: var(--muted); }
+    .input-group.open .dd-btn { border-color: #fff; background: rgba(0,0,0,0.6); }
+    .input-group.open .select-icon { transform: rotate(180deg); }
+    .select-icon { transition: transform .25s ease; width: 16px; height: 16px; color: var(--muted); }
+    .dd-panel { position: absolute; left: 0; right: 0; top: calc(100% + 8px); background: rgba(14,14,16,0.97); border: 1px solid var(--line); border-radius: 20px; backdrop-filter: blur(18px); box-shadow: 0 18px 50px rgba(0,0,0,.6); display: none; overflow: hidden; z-index: 70; }
+    .input-group.open .dd-panel { display: block; animation: fadeIn .25s ease-out; }
+    .dd-list { max-height: 200px; overflow-y: auto; padding: 6px; }
+    .dd-opt { padding: 12px 16px; border-radius: 12px; font-size: .95rem; cursor: pointer; }
+    .dd-opt:hover { background: rgba(255,255,255,0.08); }
+    .dd-opt.sel { background: rgba(235,118,80,0.18); color: var(--orange); }
 
     .start-btn { width: 100%; padding: 18px; border-radius: 999px; background: var(--orange); color: #1a0d06; font-size: 1.02rem; font-weight: 600; letter-spacing: -0.01em; display: flex; align-items: center; justify-content: center; gap: 9px; transition: transform .16s ease, opacity .2s; margin-bottom: 13px; }
     .start-btn:active { transform: scale(.975); }
@@ -268,11 +298,27 @@
     .toast { position: fixed; left: 50%; bottom: 118px; transform: translate(-50%, 20px); background: #fff; color: #000; padding: 13px 22px; border-radius: 999px; font-size: .9rem; font-weight: 500; z-index: 600; opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .3s var(--ease); max-width: calc(100vw - 40px); text-align: center; }
     .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-    /* NEW: input style for modals like Change password */
     .field { width: 100%; padding: 15px 20px; border-radius: 999px; background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.16); color: #fff; font-size: 1rem; outline: none; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); transition: border-color .2s, background .2s; }
     .field:focus { border-color: #fff; background: rgba(0,0,0,0.6); }
     .field::placeholder { color: #707070; }
 
+    /* Notes Page Styling */
+    .note-container { background: var(--surface); border: 1px solid rgba(255,255,255,0.07); border-radius: 30px; padding: 26px 22px; margin-bottom: 20px; }
+    .note-header { margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 16px; }
+    .note-header h2 { font-size: 1.5rem; font-weight: 500; color: #fff; margin-bottom: 6px; letter-spacing: -0.02em; }
+    .note-subject { display: inline-block; font-size: .75rem; font-weight: 600; color: var(--blue); background: rgba(141,185,234,0.15); padding: 4px 10px; border-radius: 999px; text-transform: uppercase; }
+    
+    .markdown-body { font-size: .98rem; line-height: 1.65; color: #d1d1d1; }
+    .markdown-body p { margin-bottom: 14px; }
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 { color: #fff; margin: 22px 0 12px; font-weight: 500; }
+    .markdown-body h1 { font-size: 1.3rem; }
+    .markdown-body h2 { font-size: 1.15rem; }
+    .markdown-body h3 { font-size: 1.05rem; }
+    .markdown-body ul, .markdown-body ol { margin: 0 0 14px 20px; }
+    .markdown-body li { margin-bottom: 6px; }
+    .markdown-body blockquote { border-left: 3px solid var(--orange); padding-left: 14px; margin: 16px 0; color: var(--muted); font-style: italic; }
+    .markdown-body code { background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 6px; font-family: monospace; font-size: .9em; }
+    
     .card { transition: transform .45s var(--ease), box-shadow .45s var(--ease), filter .3s ease; }
     .badge { transition: transform .45s var(--ease); }
     .pill { transition: color .2s, border-color .2s, background .2s, transform .35s var(--ease); }
@@ -435,7 +481,13 @@
           <h1 class="greet-name" id="greet-name">Student</h1>
           <p class="greet-sub" id="greet-sub">Let's get a session in.</p>
         </div>
-        <button class="round-btn" data-go="profile" aria-label="Open profile"><span class="dots"><i></i><i></i><i></i><i></i></span></button>
+        <div style="display:flex; gap:8px;">
+          <button class="round-btn" id="bell-btn" aria-label="Announcements" style="display:none">
+            <i data-lucide="bell"></i>
+            <span class="badge-dot"></span>
+          </button>
+          <button class="round-btn" data-go="profile" aria-label="Open profile"><span class="dots"><i></i><i></i><i></i><i></i></span></button>
+        </div>
       </header>
 
       <button class="trial-banner stagger" id="trial-banner" style="--i:1" hidden>
@@ -471,23 +523,21 @@
           </div>
         </article>
 
-        <article class="card wide c-blue stagger" data-id="challenge" data-cat="streaks" style="--i:4">
+        <article class="card wide c-blue stagger" data-id="challenge" data-cat="streaks" style="--i:4" onclick="openChallengeModal()">
           <div class="badge"><i data-lucide="trophy"></i></div>
           <div class="text">
-            <p class="eyebrow-dark" id="challenge-count">0 of 2 done</p>
+            <p class="eyebrow-dark" id="challenge-count">Check progress</p>
             <h3>Weekly Challenge</h3>
             <div class="mini-bar"><div id="challenge-bar"></div></div>
           </div>
-          <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
         </article>
 
-        <article class="card wide c-cream stagger" data-id="rec" data-cat="exams" style="--i:5">
+        <article class="card wide c-cream stagger" data-id="rec" data-cat="exams" style="--i:5" onclick="startRecommended()">
           <div class="badge"><i data-lucide="atom"></i></div>
           <div class="text">
             <p class="eyebrow-dark" id="rec-eyebrow">Recommended for you</p>
-            <h3 id="rec-title">Physics: Mechanics</h3>
+            <h3 id="rec-title">Loading...</h3>
           </div>
-          <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
         </article>
 
         <article class="card wide c-green stagger" data-id="mock" data-cat="exams" style="--i:6">
@@ -496,15 +546,26 @@
             <p class="eyebrow-dark">40 Qs &bull; 30 Mins</p>
             <h3>Take a Full Mock</h3>
           </div>
-          <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
         </article>
       </div>
 
       <p class="empty" id="empty" hidden>Nothing here yet.<br/>Tap the heart on a card to save it.</p>
       
+      <!-- REVERTED TO ORIGINAL TIP OF THE DAY -->
       <div class="panel stagger" style="--i:7; margin-top:16px; background:transparent; border:1px dashed rgba(255,255,255,0.15); text-align:center; padding:20px;">
         <p style="font-size:.85rem; color:var(--muted);">"Small daily improvements are the key to staggering long-term results."</p>
         <p style="font-size:.7rem; color:#444; margin-top:8px; text-transform:uppercase; letter-spacing:.05em;">Stride Tip of the Day</p>
+      </div>
+    </section>
+
+    <!-- NEW NOTES PAGE -->
+    <section id="notes" class="page">
+      <header class="top-header">
+        <h1>Notes</h1>
+      </header>
+      
+      <div id="notes-content" class="stagger" style="--i:0">
+        <!-- Rendered dynamically -->
       </div>
     </section>
 
@@ -518,6 +579,14 @@
 
       <div class="panel stagger" style="--i:1">
         <h3>Session setup</h3>
+        
+        <div class="field-row" style="margin-bottom:18px">
+          <div class="field-label">Year<small>optional</small></div>
+          <div class="input-group" id="year-group">
+            <select id="year-select" class="hidden-sel"></select>
+          </div>
+        </div>
+
         <div class="field-row">
           <div class="field-label">Questions<small>per session</small></div>
           <div class="stepper">
@@ -687,11 +756,13 @@
     </div>
   </div>
 
+  <!-- UPDATED DOCK WITH NOTES -->
   <nav class="dock" aria-label="Main">
     <div class="dock-inner">
       <button class="nav-item active" data-target="home" aria-label="Home"><i data-lucide="home"></i></button>
       <button class="nav-item" data-target="practice" aria-label="Practice"><i data-lucide="grid"></i></button>
       <button class="fab" id="fab" aria-label="Start practice"><i data-lucide="plus"></i></button>
+      <button class="nav-item" data-target="notes" aria-label="Notes"><i data-lucide="book-open"></i></button>
       <button class="nav-item" data-target="stats" aria-label="Stats"><i data-lucide="bar-chart-2"></i></button>
       <button class="nav-item" data-target="profile" aria-label="Profile"><i data-lucide="user"></i></button>
     </div>
@@ -701,7 +772,7 @@
     <div class="modal-back" data-close></div>
     <div class="modal-card">
       <h3 id="modal-title"></h3>
-      <p id="modal-body"></p>
+      <div id="modal-body"></div>
       <div class="modal-actions" id="modal-actions"></div>
     </div>
   </div>
@@ -722,6 +793,11 @@
     let currentUser = null;
     let dbProfile = {};
     let dbTests = [];
+    let availableSubjects = [];
+    let dailyNote = null;
+    let challenges = [];
+    let myChallenges = [];
+    let announcements = [];
 
     let access = { has_access: true };
     let accessAt = 0;
@@ -731,6 +807,66 @@
     const myRef = () => 'STR-' + currentUser.id.replace(/-/g, '').slice(0, 5).toUpperCase();
     const daysLeft = ts => Math.max(0, Math.ceil((new Date(ts).getTime() - Date.now()) / 86400000));
     const OPAY_LOGO = '<svg class="opay-logo" viewBox="0 0 112 36" aria-label="OPay"><circle cx="18" cy="18" r="17" fill="#fff"/><circle cx="18" cy="18" r="8" fill="none" stroke="#0B9C74" stroke-width="5.5"/><text x="43" y="26" font-family="Outfit, sans-serif" font-size="24" font-weight="700" fill="#fff" letter-spacing="-0.5">OPay</text></svg>';
+
+    // --- Custom Select Logic ---
+    let yearSelectInstance = null;
+    function enhanceSelect(sel, onChange) {
+      const group = sel.parentElement;
+      group.innerHTML = ''; 
+      
+      const btn = document.createElement('div');
+      btn.className = 'dd-btn placeholder';
+      btn.tabIndex = 0;
+      btn.innerHTML = `<span>Select year</span><svg class="select-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>`;
+      
+      const panel = document.createElement('div');
+      panel.className = 'dd-panel';
+      const list = document.createElement('div');
+      list.className = 'dd-list';
+      panel.appendChild(list);
+
+      group.appendChild(sel);
+      group.appendChild(btn);
+      group.appendChild(panel);
+      sel.classList.add('hidden-sel');
+
+      function label() {
+        const o = sel.options[sel.selectedIndex];
+        const isPh = !sel.value;
+        btn.querySelector('span').textContent = o ? o.textContent : '';
+        btn.classList.toggle('placeholder', isPh);
+      }
+
+      function render() {
+        list.innerHTML = '';
+        Array.from(sel.options).forEach(o => {
+          const d = document.createElement('div');
+          d.className = 'dd-opt' + (o.value === sel.value ? ' sel' : '');
+          d.textContent = o.textContent;
+          d.addEventListener('click', () => {
+            sel.value = o.value;
+            label();
+            group.classList.remove('open');
+            if (onChange) onChange(o.value);
+          });
+          list.appendChild(d);
+        });
+      }
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.input-group.open').forEach(g => { if(g !== group) g.classList.remove('open'); });
+        render();
+        group.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!group.contains(e.target)) group.classList.remove('open');
+      });
+
+      label();
+      return { label, render };
+    }
 
     async function loadAccess() {
       try {
@@ -923,18 +1059,31 @@
       document.getElementById('susp-out').addEventListener('click', async () => { await supabase.auth.signOut(); toLogin(); });
     }
 
-    async function showAnnouncement() {
-      try {
-        const { data, error } = await supabase.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false }).limit(1);
-        if (error || !data || !data.length) return;
-        const a = data[0];
-        if (localStorage.getItem('stride_seen_ann') === a.id) return;
-        const safe = t => String(t || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-        setTimeout(() => openModal({
-          title: safe(a.title), body: safe(a.body),
-          actions: [{ label: 'Got it', style: 'primary', onClick: () => { try { localStorage.setItem('stride_seen_ann', a.id); } catch (e) {} } }]
-        }), 900);
-      } catch (e) {}
+    async function fetchMeta() {
+      const { data } = await supabase.from('questions').select('subject, year, section');
+      if (data) {
+        availableSubjects = [...new Set(data.map(q => q.subject).filter(Boolean))];
+      }
+    }
+
+    async function loadDynamicContent() {
+      // Fetch active note
+      const { data: notes } = await supabase.from('daily_notes').select('*').eq('active', true).order('created_at', { ascending: false }).limit(1);
+      if (notes && notes.length > 0) dailyNote = notes[0];
+
+      // Fetch challenges
+      const { data: chs } = await supabase.from('challenges').select('*').eq('active', true);
+      challenges = chs || [];
+
+      // Fetch user challenge progress
+      if (challenges.length > 0) {
+        const { data: uchs } = await supabase.from('user_challenges').select('*').eq('user_id', currentUser.id);
+        myChallenges = uchs || [];
+      }
+
+      // Fetch announcements
+      const { data: anns } = await supabase.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false });
+      announcements = anns || [];
     }
 
     async function initApp() {
@@ -961,7 +1110,6 @@
 
       dbTests = testsRes.data || [];
 
-      // Self-heal: keep the super admin account permanently elevated
       const SUPER_ADMIN_EMAIL = 'estdavid10@gmail.com';
       if ((currentUser.email || '').toLowerCase() === SUPER_ADMIN_EMAIL && dbProfile.role !== 'admin') {
         try {
@@ -974,11 +1122,19 @@
         (!dbProfile.suspended_until || new Date(dbProfile.suspended_until) > new Date());
       if (suspended) { showSuspended(dbProfile); return; }
 
-      await loadAccess();
+      // Streak Logic
+      const todayStr = new Date().toISOString().split('T')[0];
+      if (dbProfile.last_login_date !== todayStr) {
+        const newStreak = (dbProfile.streak_count || 0) + 1;
+        await supabase.from('profiles').update({ streak_count: newStreak, last_login_date: todayStr }).eq('id', currentUser.id);
+        dbProfile.streak_count = newStreak;
+        dbProfile.last_login_date = todayStr;
+      }
+
+      await Promise.all([loadAccess(), fetchMeta(), loadDynamicContent()]);
       html.style.visibility = 'visible';
       renderAll();
       icons();
-      showAnnouncement();
     }
 
     function toLogin() {
@@ -1070,6 +1226,7 @@
       window.scrollTo({ top: 0, behavior: 'auto' });
       animatePage(document.getElementById(id));
       if (id === 'stats') runAnalyticsAnimations();
+      if (id === 'notes') renderNotesPage();
     }
 
     navBtns.forEach(b => b.addEventListener('click', () => goTo(b.dataset.target)));
@@ -1133,13 +1290,77 @@
         weekEl.appendChild(d);
       });
 
-      $('#challenge-count').textContent = '1 of 2 done';
-      $('#challenge-bar').style.width = '50%';
+      // Render Challenges
+      if (challenges.length > 0) {
+        const weekly = challenges.find(c => c.type === 'weekly');
+        if (weekly) {
+          let uc = myChallenges.find(u => u.challenge_id === weekly.id);
+          let prog = uc ? uc.progress : 0;
+          let pctDone = Math.min(100, Math.round((prog / weekly.target) * 100));
+          $('#challenge-count').textContent = `${prog} of ${weekly.target} done`;
+          $('#challenge-bar').style.width = pctDone + '%';
+        }
+      } else {
+        $('#challenge-count').textContent = 'No active challenges';
+        $('#challenge-bar').style.width = '0%';
+      }
+
+      // Recommended (Shuffle real subject)
+      if (availableSubjects.length > 0) {
+        const rndSub = availableSubjects[Math.floor(Math.random() * availableSubjects.length)];
+        const rndTopics = ['Mechanics', 'Algebra', 'Organic Chemistry', 'Comprehension', 'Economics'];
+        const rndTopic = rndTopics[Math.floor(Math.random() * rndTopics.length)];
+        $('#rec-eyebrow').textContent = rndSub;
+        $('#rec-title').textContent = `Study: ${rndTopic}`;
+      }
 
       const saved = dbProfile.saved_cards || [];
       cards.forEach(card => card.classList.toggle('saved', saved.includes(card.dataset.id)));
       applyFilter();
     }
+
+    function renderNotesPage() {
+      const root = $('#notes-content');
+      if (dailyNote) {
+        let mathHtml = marked.parse(dailyNote.content);
+        root.innerHTML = `
+          <div class="note-container">
+            <div class="note-header">
+              ${dailyNote.subject ? `<span class="note-subject">${escH(dailyNote.subject)}</span>` : ''}
+              <h2 style="margin-top:8px">${escH(dailyNote.title)}</h2>
+            </div>
+            <div class="markdown-body">${mathHtml}</div>
+            ${dailyNote.short_test_count > 0 ? `
+              <button class="start-btn" style="margin-top:20px; margin-bottom:0" onclick="startNoteTest()">
+                <i data-lucide="play"></i> Take Short Test (${dailyNote.short_test_count} Qs)
+              </button>
+            ` : ''}
+          </div>
+        `;
+        renderMathInElement($('.markdown-body', root), { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] });
+        icons();
+      } else {
+        root.innerHTML = `
+          <div class="empty" style="margin-top:40px">
+            <i data-lucide="book" style="width:48px;height:48px;margin:0 auto 16px;color:var(--muted);opacity:.5"></i>
+            <p>No note for today.<br>Practice questions for now.</p>
+          </div>
+        `;
+        icons();
+      }
+    }
+
+    window.startNoteTest = () => {
+      if (!dailyNote) return;
+      startTest({
+        subjects: dailyNote.subject ? [dailyNote.subject] : practice.selected,
+        year: 'all',
+        count: dailyNote.short_test_count,
+        difficulty: 'medium',
+        mode: 'practice',
+        time: 0
+      });
+    };
 
     function applyFilter() {
       let shown = 0;
@@ -1180,11 +1401,58 @@
       });
     });
 
+    window.openChallengeModal = () => {
+      if (!challenges.length) return toast('No active challenges right now.');
+      let html = '<div class="stack">';
+      challenges.forEach(c => {
+        let uc = myChallenges.find(u => u.challenge_id === c.id);
+        let prog = uc ? uc.progress : 0;
+        let pctDone = Math.min(100, Math.round((prog / c.target) * 100));
+        html += `
+          <div class="panel" style="margin-bottom:0; padding:16px;">
+            <div class="panel-head" style="margin-bottom:6px">
+              <h3 style="font-size:1rem; margin:0">${escH(c.title)}</h3>
+              <span class="tag ${uc?.completed ? 't-new' : 't-prem'}">${uc?.completed ? 'Done' : c.type}</span>
+            </div>
+            <p style="font-size:.85rem; color:var(--muted); margin-bottom:12px">${escH(c.description || '')}</p>
+            <div class="area-bar"><div style="width:${pctDone}%"></div></div>
+            <p style="font-size:.75rem; color:#fff; margin-top:6px; text-align:right">${prog} / ${c.target}</p>
+          </div>
+        `;
+      });
+      html += '</div>';
+      openModal({ title: 'Your Challenges', body: html, actions: [{ label: 'Close', style: 'ghost' }] });
+    };
+
+    window.startRecommended = () => {
+      if (!availableSubjects.length) return toast('No subjects available.');
+      const rndSub = availableSubjects[Math.floor(Math.random() * availableSubjects.length)];
+      startTest({ subjects: [rndSub], year: 'all', count: 10, difficulty: 'medium', mode: 'practice', time: 0 });
+    };
+
+    // Announcements Bell
+    if (announcements.length > 0) {
+      $('#bell-btn').style.display = 'grid';
+      $('#bell-btn').addEventListener('click', () => {
+        let html = '<div class="stack">';
+        announcements.forEach(a => {
+          html += `
+            <div class="panel" style="padding:16px; margin-bottom:0">
+              <h3 style="font-size:1.05rem; margin-bottom:6px">${escH(a.title)}</h3>
+              <p style="font-size:.88rem; color:#e9e9e9; line-height:1.5">${escH(a.body)}</p>
+            </div>
+          `;
+        });
+        html += '</div>';
+        openModal({ title: 'Announcements', body: html, actions: [{ label: 'Got it', style: 'primary' }] });
+      });
+    }
+
     const SUBJECT_MAP = {
-      sciences: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Biology'],
-      arts: ['English', 'Literature', 'Government', 'History', 'CRS / IRS'],
+      sciences: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Biology', 'Agricultural Science'],
+      arts: ['English', 'Literature', 'Government', 'History', 'CRS / IRS', 'Fine Arts', 'French', 'Geography', 'Music', 'Yoruba', 'Igbo', 'Hausa'],
       commercial: ['Mathematics', 'English', 'Economics', 'Accounting', 'Commerce'],
-      engineering: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Further Maths'],
+      engineering: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Further Maths', 'Technical Drawing'],
       medicine: ['Biology', 'Chemistry', 'Physics', 'English', 'Mathematics'],
       law: ['English', 'Literature', 'Government', 'History', 'CRS / IRS'],
       technology: ['Mathematics', 'English', 'Physics', 'Computer Studies', 'Further Maths']
@@ -1194,24 +1462,64 @@
     const courseKey = userCourse.toLowerCase().split(/[\s,/-]+/)[0];
     const subjects = SUBJECT_MAP[courseKey] || SUBJECT_MAP['sciences'];
 
-    const practice = { selected: subjects.slice(0, 2), count: 20, diff: 'medium', mode: 'practice', time: 15 };
+    const practice = { selected: [], count: 20, diff: 'medium', mode: 'practice', time: 15, year: 'all' };
     const Q_STEPS = [5, 10, 15, 20, 30, 40, 50];
 
     function renderPractice() {
       $('#course-label').textContent = userCourse;
       const grid = $('#subject-grid');
       grid.innerHTML = '';
+      
       subjects.forEach(s => {
+        const hasQ = availableSubjects.includes(s);
         const b = document.createElement('button');
-        b.className = 'subject' + (practice.selected.includes(s) ? ' on' : '');
+        let cls = 'subject';
+        if (practice.selected.includes(s)) cls += ' on';
+        if (!hasQ) cls += ' disabled';
+        b.className = cls;
+        
         b.innerHTML = `<span class="dot"></span>${s}`;
         b.addEventListener('click', () => {
+          if (!hasQ) return;
           const i = practice.selected.indexOf(s);
           if (i === -1) practice.selected.push(s); else practice.selected.splice(i, 1);
           renderPractice();
         });
         grid.appendChild(b);
       });
+
+      const yearSel = $('#year-select');
+      const currentYearVal = yearSel.value || 'all';
+      
+      const updateYearSelect = async () => {
+        let q = supabase.from('questions').select('year').not('year', 'is', null);
+        if (practice.selected.length > 0) {
+          q = q.in('subject', practice.selected);
+        }
+        const { data } = await q;
+        let years = [...new Set((data || []).map(d => d.year))].sort((a,b) => b-a);
+        
+        yearSel.innerHTML = '<option value="all">All Years</option>';
+        years.forEach(y => {
+          const opt = document.createElement('option');
+          opt.value = y;
+          opt.textContent = y;
+          if (String(currentYearVal) === String(y)) opt.selected = true;
+          yearSel.appendChild(opt);
+        });
+
+        if (yearSelectInstance) {
+          yearSelectInstance.render();
+          yearSelectInstance.label();
+        } else {
+          yearSelectInstance = enhanceSelect(yearSel, (val) => {
+            practice.year = val;
+          });
+        }
+        practice.year = yearSel.value;
+      };
+      
+      updateYearSelect();
 
       const map = {};
       dbTests.forEach(t => {
@@ -1246,7 +1554,21 @@
       const b = e.target.closest('button'); if (!b) return;
       practice.mode = b.dataset.mode;
       $$('button', $('#mode-seg')).forEach(x => x.classList.toggle('on', x === b));
-      $('#time-config').style.display = (practice.mode === 'timed' || practice.mode === 'mock') ? 'flex' : 'none';
+      
+      const timeConfig = $('#time-config');
+      if (practice.mode === 'practice') {
+        timeConfig.style.display = 'none';
+        practice.time = 0; 
+      } else if (practice.mode === 'timed') {
+        timeConfig.style.display = 'flex';
+        if (practice.time === 0) {
+          practice.time = 15;
+          $$('button', $('#time-seg')).forEach(x => x.classList.toggle('on', x.dataset.time === '15'));
+        }
+      } else if (practice.mode === 'mock') {
+        timeConfig.style.display = 'none';
+        practice.time = 120; 
+      }
     });
 
     $('#time-seg').addEventListener('click', e => {
@@ -1255,18 +1577,26 @@
       $$('button', $('#time-seg')).forEach(x => x.classList.toggle('on', x === b));
     });
 
+    window.startTest = (cfg) => {
+      localStorage.setItem('stride_test_config', JSON.stringify(cfg));
+      location.href = 'test.html';
+    };
+
     $('#start-btn').addEventListener('click', async () => {
       if (!requireAccess()) return;
       if (!practice.selected.length) return toast('Pick at least one subject first.');
-      if (practice.count === 0) return toast('No questions available for this config.');
 
-      let timeHtml = (practice.mode === 'timed' || practice.mode === 'mock') ? `<div class="summary-row"><span>Time</span><span>${practice.time} mins</span></div>` : '';
+      let timeHtml = '';
+      if (practice.mode === 'timed') timeHtml = `<div class="summary-row"><span>Time</span><span>${practice.time} mins</span></div>`;
+      else if (practice.mode === 'mock') timeHtml = `<div class="summary-row"><span>Time</span><span>120 mins (JAMB standard)</span></div>`;
+      else timeHtml = `<div class="summary-row"><span>Time</span><span>Infinite (Practice)</span></div>`;
       
       openModal({
         title: 'Review Session',
         body: `
           <div class="summary-box">
             <div class="summary-row"><span>Subjects</span><span>${practice.selected.join(', ')}</span></div>
+            <div class="summary-row"><span>Year</span><span>${practice.year === 'all' ? 'All Years' : practice.year}</span></div>
             <div class="summary-row"><span>Questions</span><span>${practice.count}</span></div>
             <div class="summary-row"><span>Difficulty</span><span style="text-transform:capitalize">${practice.diff}</span></div>
             <div class="summary-row"><span>Mode</span><span style="text-transform:capitalize">${practice.mode}</span></div>
@@ -1274,25 +1604,20 @@
           </div>
           <p style="margin-top:16px;font-size:.85rem;color:var(--muted)">Ready to begin.</p>
         `,
-        actions: [{ label: 'Start Now', style: 'primary', onClick: () => {
-           openModal({
-             title: 'Question Bank Empty',
-             body: 'The database has no questions yet. Would you like to simulate completing this session to test the database flow?',
-             actions: [{ label: 'Simulate Score', style: 'primary', onClick: async () => {
-                await supabase.from('tests').insert([{
-                  user_id: currentUser.id,
-                  subject: practice.selected[0],
-                  score: Math.floor(practice.count * 0.8),
-                  total: practice.count,
-                  mode: practice.mode
-                }]);
-                toast('Test saved to database!');
-                const { data } = await supabase.from('tests').select('*').eq('user_id', currentUser.id).order('date', { ascending: false });
-                dbTests = data || [];
-                renderAll();
-             }}]
-           });
-        }}]
+        actions: [{
+          label: 'Start Now',
+          style: 'primary',
+          onClick: () => {
+            startTest({
+              subjects: practice.selected,
+              year: practice.year,
+              count: practice.count,
+              difficulty: practice.diff,
+              mode: practice.mode,
+              time: practice.time
+            });
+          }
+        }]
       });
     });
 
@@ -1398,7 +1723,6 @@
 
     $('#plan-btn').addEventListener('click', openUpgrade);
 
-    // NEW: Change password
     $('#password-btn').addEventListener('click', () => {
       openModal({
         title: 'Change password',

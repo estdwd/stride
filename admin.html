@@ -10,6 +10,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -28,7 +33,6 @@
     svg { width: 20px; height: 20px; }
     [hidden] { display: none !important; }
 
-    /* Background */
     .bg { position: fixed; inset: 0; z-index: -1; background: #020305; overflow: hidden; contain: strict; }
     .glow { position: absolute; border-radius: 50%; pointer-events: none; }
     .g-blue { width: 640px; height: 520px; left: -300px; top: -160px; background: radial-gradient(closest-side, rgba(24,120,170,0.55), rgba(10,60,95,0.22) 55%, rgba(0,0,0,0) 78%); animation: driftA 42s ease-in-out infinite alternate; }
@@ -39,7 +43,6 @@
     .bg::before { content: ""; position: absolute; inset: 0; background: radial-gradient(120% 70% at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.62) 100%), rgba(0,0,0,0.32); }
     .bg::after { content: ""; position: absolute; inset: 0; background-image: radial-gradient(circle at center, rgba(0,0,0,0) 0, rgba(0,0,0,0) 1px, rgba(0,0,0,0.8) 1.7px); background-size: 5px 5px; }
 
-    /* Access gate */
     .gate { position: fixed; inset: 0; z-index: 900; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 30px; text-align: center; transition: opacity .4s ease; }
     .gate.out { opacity: 0; pointer-events: none; }
     .gate svg.lg { width: 52px; height: 65px; color: var(--logo); filter: drop-shadow(0 0 18px rgba(255,110,30,.55)); animation: pulse 1.6s ease-in-out infinite alternate; }
@@ -48,23 +51,21 @@
     .gate h2 { font-size: 1.6rem; font-weight: 500; letter-spacing: -0.02em; }
     .gate p { color: var(--muted); font-size: .95rem; line-height: 1.5; max-width: 32ch; }
 
-    /* Pages */
     .page { display: none; position: relative; width: 100%; }
     .page.active { display: block; animation: pageIn .28s ease both; }
     @keyframes pageIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
     .page.in .stagger { animation: rise .5s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 55ms); }
 
-    /* Header */
     .top-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; gap: 12px; }
     .top-header h1 { font-size: clamp(2.4rem, 11vw, 3.2rem); font-weight: 400; letter-spacing: -0.045em; line-height: 1.02; }
     .eyebrow { font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-    .head-btns { display: flex; gap: 8px; flex-shrink: 0; margin-top: 2px; }
+    .head-btns { display: flex; gap: 8px; flex-shrink: 0; margin-top: 2px; align-items: center; }
     .round-btn { width: 48px; height: 48px; border-radius: 50%; background: rgba(22,22,22,0.92); border: 1px solid rgba(255,255,255,0.08); display: grid; place-items: center; }
     .round-btn.spin svg { animation: spin .8s linear infinite; }
+    .round-btn.on { background: var(--orange); color: var(--ink); border-color: var(--orange); }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Cards */
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 13px; }
     .card { position: relative; color: var(--ink); border-radius: var(--r-card); overflow: hidden; cursor: pointer; }
     .c-orange { background: var(--orange); } .c-yellow { background: var(--yellow); } .c-cream { background: var(--cream); } .c-green { background: var(--green); } .c-blue { background: var(--blue); }
@@ -76,7 +77,6 @@
     .sc .big { font-size: 3.6rem; font-weight: 600; letter-spacing: -0.06em; line-height: .9; font-variant-numeric: tabular-nums; }
     .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 
-    /* Panels */
     .panel { background: var(--surface); border: 1px solid rgba(255,255,255,0.07); border-radius: var(--r-panel); padding: 24px 20px; margin-bottom: 13px; }
     .panel h3 { font-size: 1.12rem; font-weight: 500; margin-bottom: 16px; letter-spacing: -0.01em; }
     .panel-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
@@ -89,7 +89,6 @@
     .stat .v { font-size: 1.9rem; font-weight: 500; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
     .stat .v small { font-size: .95rem; font-weight: 400; color: var(--muted); }
 
-    /* Charts */
     .bars { display: flex; align-items: flex-end; gap: 6px; height: 132px; }
     .bar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; min-width: 0; }
     .bar i { display: block; width: 100%; border-radius: 8px 8px 4px 4px; background: linear-gradient(to top, rgba(235,118,80,.55), var(--orange)); height: 0; min-height: 4px; transition: height .9s var(--ease); }
@@ -108,7 +107,6 @@
     .area-bar.weak > div { background: var(--red); }
     .empty { text-align: center; color: var(--muted); padding: 34px 16px; font-size: .95rem; line-height: 1.5; }
 
-    /* Inputs */
     .field { width: 100%; padding: 16px 20px; border-radius: 999px; background: rgba(0,0,0,0.45); border: 1px solid var(--line); color: #fff; font-size: 1rem; outline: none; transition: border-color .2s, background .2s; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
     .field:focus { border-color: #fff; background: rgba(0,0,0,0.6); }
     .field::placeholder { color: #707070; }
@@ -131,7 +129,7 @@
     .seg button { padding: 11px 6px; border-radius: 999px; font-size: .9rem; color: var(--muted); }
     .seg button.on { color: #000; background: #fff; font-weight: 500; }
 
-    .tool-row { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; }
+    .tool-row { display: flex; gap: 8px; margin-bottom: 14px; align-items: center; flex-wrap: wrap; }
     .tool-row .seg { flex: 1; }
     .tool-btn { height: 46px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--line); background: rgba(0,0,0,0.28); display: inline-flex; align-items: center; gap: 8px; font-size: .92rem; white-space: nowrap; }
     .tool-btn svg { width: 17px; height: 17px; }
@@ -140,7 +138,6 @@
     .btn:disabled { opacity: .5; pointer-events: none; }
     .btn svg { width: 19px; height: 19px; }
 
-    /* User rows */
     .urow { display: flex; align-items: center; gap: 13px; width: 100%; padding: 12px 8px; margin: 0 -8px; width: calc(100% + 16px); border-radius: 22px; text-align: left; border-bottom: 0; }
     .urow + .urow { margin-top: 2px; }
     .av { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 1.1rem; font-weight: 600; color: var(--ink); flex-shrink: 0; text-transform: uppercase; }
@@ -156,7 +153,6 @@
     .t-new { background: rgba(151,216,110,0.16); color: var(--green); }
     .more-btn { display: block; width: 100%; padding: 14px; margin-top: 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); font-size: .92rem; }
 
-    /* Detail sheet */
     .u-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
     .u-head h3 { margin: 0 !important; font-size: 1.3rem !important; word-break: break-word; }
     .u-head p { color: var(--muted) !important; font-size: .86rem !important; margin-top: 2px; word-break: break-all; }
@@ -196,7 +192,6 @@
     .test-body h4 { font-size: .94rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .test-body p { font-size: .76rem; color: var(--muted); margin-top: 2px; }
 
-    /* Announcements + logs */
     .ann { padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
     .ann:first-child { padding-top: 0; }
     .ann:last-child { border-bottom: 0; padding-bottom: 0; }
@@ -216,7 +211,6 @@
     .log h4 b { font-weight: 500; }
     .log p { color: var(--muted); font-size: .76rem; margin-top: 3px; word-break: break-word; }
 
-    /* Dock */
     .dock { position: fixed; left: 0; right: 0; bottom: 0; padding: 40px 0 20px; display: flex; justify-content: center; background: linear-gradient(to top, rgba(0,0,0,0.92) 22%, rgba(0,0,0,0)); z-index: 100; pointer-events: none; }
     .dock-inner { pointer-events: auto; display: flex; align-items: center; gap: 2px; padding: 6px; border-radius: 999px; background: rgba(26,26,26,0.97); border: 1px solid rgba(255,255,255,0.09); box-shadow: 0 12px 34px rgba(0,0,0,0.7); }
     .nav-item { position: relative; width: 50px; height: 50px; border-radius: 999px; display: grid; place-items: center; color: #7d7d7d; }
@@ -224,7 +218,6 @@
     .nav-item svg { width: 21px; height: 21px; }
     .no-icons .nav-item::after { content: attr(aria-label); font-size: .62rem; }
 
-    /* Payments */
     .lbl { display: block; font-size: .78rem; color: var(--muted); margin: 4px 0 -2px 8px; }
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .seg.four-up { grid-template-columns: repeat(4, 1fr); }
@@ -247,7 +240,27 @@
     .mini.ok { background: var(--orange); border-color: var(--orange); color: #1a0d06; font-weight: 600; }
     .rcpt-full { width: 100%; border-radius: 20px; display: block; margin-top: 6px; }
 
-    /* Modal + toast */
+    .q-item { padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .q-item:last-child { border-bottom: 0; }
+    .q-item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+    .q-item-text { font-size: .95rem; line-height: 1.45; flex: 1; word-break: break-word; }
+    .q-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .q-mini-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.06); display: grid; place-items: center; color: var(--muted); transition: background .2s, color .2s; }
+    .q-mini-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .q-mini-btn.del:hover { background: rgba(232,97,90,0.15); color: var(--red); }
+    .q-mini-btn svg { width: 14px; height: 14px; }
+    .q-item-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .q-tag { font-size: .65rem; font-weight: 600; letter-spacing: .03em; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--muted); text-transform: uppercase; }
+    .q-tag.sub { background: rgba(141,185,234,0.15); color: var(--blue); }
+    .q-tag.easy { background: rgba(151,216,110,0.15); color: var(--green); }
+    .q-tag.medium { background: rgba(248,203,74,0.15); color: var(--yellow); }
+    .q-tag.hard { background: rgba(232,97,90,0.15); color: var(--red); }
+
+    .year-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.07); border-radius: 20px; padding: 20px; text-align: center; cursor: pointer; transition: transform .2s; }
+    .year-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.2); }
+    .year-card h4 { font-size: 1.5rem; font-weight: 500; color: #fff; margin-bottom: 4px; }
+    .year-card p { font-size: .8rem; color: var(--muted); }
+
     .modal { position: fixed; inset: 0; z-index: 500; display: grid; place-items: end center; }
     .modal-back { position: absolute; inset: 0; background: rgba(0,0,0,0.72); animation: fadeIn .2s ease; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -265,7 +278,6 @@
     .toast.show { opacity: 1; transform: translate(-50%, 0); }
     .toast.err { background: var(--red); color: #fff; }
 
-    /* ---------- Hover & click motion ---------- */
     .card { transition: transform .45s var(--ease), box-shadow .45s var(--ease), filter .3s ease; }
     .sc .ic { transition: transform .45s var(--ease); }
     .round-btn { transition: transform .35s var(--ease), border-color .2s; }
@@ -318,7 +330,6 @@
 </head>
 <body>
 
-  <!-- Access gate -->
   <div class="gate" id="gate">
     <svg class="lg" viewBox="0 0 2333 2916" fill="currentColor" fill-rule="evenodd" aria-hidden="true">
       <path d="M488 0H2333V2187A218.5 218.5 0 0 0 2333 2624V2916H488A488 488 0 0 1 0 2428V488A488 488 0 0 1 488 0ZM510 2186H1869C1808 2300 1808 2510 1869 2624H510A219 219 0 0 1 510 2186ZM1109 396A60 60 0 0 1 1224 396L1346 795A60 60 0 0 0 1386 835L1785 957A60 60 0 0 1 1785 1072L1386 1194A60 60 0 0 0 1346 1234L1224 1633A60 60 0 0 1 1109 1633L987 1234A60 60 0 0 0 947 1194L548 1072A60 60 0 0 1 548 957L947 835A60 60 0 0 0 987 795Z"/>
@@ -339,17 +350,27 @@
         <h1 id="page-title">Overview</h1>
       </div>
       <div class="head-btns">
+        <button class="round-btn" id="console-btn" aria-label="Toggle Console Mode" title="Console Mode"><i data-lucide="terminal"></i></button>
         <button class="round-btn" id="refresh-btn" aria-label="Refresh"><i data-lucide="refresh-cw"></i></button>
         <button class="round-btn" id="exit-btn" aria-label="Back to app"><i data-lucide="log-out"></i></button>
       </div>
     </header>
 
-    <!-- OVERVIEW -->
     <section id="overview" class="page active">
+      <div id="console-panel" class="panel" style="display:none; border-color:var(--orange); background:rgba(235,118,80,0.05)">
+        <div class="panel-head">
+          <h3 style="color:var(--orange)">Console Mode Active</h3>
+          <small>Dev Tools</small>
+        </div>
+        <p class="txt" style="margin-bottom:12px;font-size:.85rem">Console mode is on. You can now edit raw stats or inject data.</p>
+        <div class="stack">
+          <button class="btn" id="console-inject-btn" style="background:var(--orange);color:#000"><i data-lucide="zap"></i> Inject Test Data to My Account</button>
+          <button class="m-btn" id="console-reset-btn">Reset My Streak to 0</button>
+        </div>
+      </div>
       <div id="ov-body"></div>
     </section>
 
-    <!-- USERS -->
     <section id="users" class="page">
       <div class="search">
         <i data-lucide="search"></i>
@@ -369,7 +390,96 @@
       </div>
     </section>
 
-    <!-- ADMINS -->
+    <section id="questions" class="page">
+      <div class="search" id="q-search-wrap">
+        <i data-lucide="search"></i>
+        <input class="field" id="q-search" type="search" placeholder="Search question text..." autocomplete="off" />
+      </div>
+      <div class="filter-pills" id="q-subject-pills"></div>
+      <div class="tool-row" id="q-tool-year">
+        <div class="seg" id="q-diff-seg">
+          <button data-diff="all" class="on">All</button>
+          <button data-diff="easy">Easy</button>
+          <button data-diff="medium">Medium</button>
+          <button data-diff="hard">Hard</button>
+        </div>
+        <button class="tool-btn" id="q-upload-btn"><i data-lucide="upload-cloud"></i>JSON</button>
+        <button class="tool-btn" id="q-add-btn"><i data-lucide="plus"></i>New</button>
+      </div>
+      <div class="tool-row" id="q-tool-list" hidden>
+        <button class="tool-btn" id="q-back-btn" style="flex:1"><i data-lucide="arrow-left"></i> Back to Years</button>
+        <span id="q-year-label" style="font-weight:500;margin-left:10px">2025</span>
+      </div>
+      <div class="panel" style="padding:0" id="q-panel">
+        <div id="q-list"></div>
+      </div>
+    </section>
+
+    <section id="content" class="page">
+      <div class="seg" id="content-tabs">
+        <button data-c="notes" class="on">Notes</button>
+        <button data-c="challenges">Challenges</button>
+        <button data-c="announce">Announcements</button>
+      </div>
+
+      <div id="c-notes" style="margin-top:14px">
+        <div class="panel">
+          <h3>New Daily Note</h3>
+          <div class="stack">
+            <input class="field" id="note-title" type="text" placeholder="Title" />
+            <input class="field" id="note-subject" type="text" placeholder="Subject (optional)" />
+            <textarea class="field" id="note-content" placeholder="Markdown content" style="min-height:120px"></textarea>
+            <div class="two-col">
+              <input class="field" id="note-short" type="number" placeholder="Short test Qs (e.g. 5)" value="0" />
+              <button class="btn" id="note-save"><i data-lucide="save"></i> Save Note</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel" style="padding:18px 16px">
+          <div class="panel-head" style="padding:0 6px"><h3>Published Notes</h3><small id="note-count"></small></div>
+          <div id="note-list"></div>
+        </div>
+      </div>
+
+      <div id="c-challenges" style="margin-top:14px; display:none">
+        <div class="panel">
+          <h3>New Challenge</h3>
+          <div class="stack">
+            <input class="field" id="ch-title" type="text" placeholder="Title (e.g. Complete 3 tests)" />
+            <input class="field" id="ch-desc" type="text" placeholder="Description" />
+            <div class="two-col">
+              <input class="field" id="ch-target" type="number" placeholder="Target (e.g. 3)" value="3" />
+              <input class="field" id="ch-reward" type="text" placeholder="Reward (e.g. 50 XP)" />
+            </div>
+            <div class="seg two" id="ch-type">
+              <button data-t="daily" class="on">Daily</button>
+              <button data-t="weekly">Weekly</button>
+            </div>
+            <button class="btn" id="ch-save"><i data-lucide="save"></i> Create Challenge</button>
+          </div>
+        </div>
+        <div class="panel" style="padding:18px 16px">
+          <div class="panel-head" style="padding:0 6px"><h3>Active Challenges</h3><small id="ch-count"></small></div>
+          <div id="ch-list"></div>
+        </div>
+      </div>
+
+      <div id="c-announce" style="margin-top:14px; display:none">
+        <div class="panel">
+          <h3>New Announcement</h3>
+          <div class="stack">
+            <input class="field" id="ann-title" type="text" placeholder="Title" />
+            <textarea class="field" id="ann-body" placeholder="Message"></textarea>
+            <button class="btn" id="ann-save"><i data-lucide="megaphone"></i> Publish</button>
+          </div>
+        </div>
+        <div class="panel" style="padding:18px 16px">
+          <div class="panel-head" style="padding:0 6px"><h3>Published</h3><small id="ann-count"></small></div>
+          <div id="ann-list"></div>
+        </div>
+      </div>
+    </section>
+
     <section id="admins" class="page">
       <div class="panel">
         <h3>Add an admin</h3>
@@ -384,7 +494,6 @@
       </div>
     </section>
 
-    <!-- PAYMENTS -->
     <section id="payments" class="page">
       <div class="seg four-up" id="pay-filter">
         <button data-f="pending" class="on">Pending</button>
@@ -406,45 +515,14 @@
           <input class="field" id="set-bank_name" />
           <label class="lbl" for="set-account_number">Account number</label>
           <input class="field" id="set-account_number" inputmode="numeric" />
-          <label class="lbl" for="set-account_name">Account name (shown to students)</label>
+          <label class="lbl" for="set-account_name">Account name</label>
           <input class="field" id="set-account_name" />
           <button class="btn" id="set-save"><i data-lucide="save"></i> Save settings</button>
           <button class="m-btn" id="cleanup-btn">Clean up old data</button>
-          <p class="txt" style="font-size:.78rem;color:var(--muted);line-height:1.5;padding:0 6px">Receipts are deleted 30 days after you approve or reject them. Expired announcements and logs older than 90 days are removed too. This runs automatically each time you open the console.</p>
         </div>
       </div>
     </section>
 
-    <!-- ANNOUNCEMENTS -->
-    <section id="announce" class="page">
-      <div class="panel">
-        <h3>New announcement</h3>
-        <div class="stack">
-          <input class="field" id="ann-title" type="text" maxlength="80" placeholder="Title" />
-          <textarea class="field" id="ann-body" maxlength="400" placeholder="Message students will see when they open the app"></textarea>
-          <div class="seg" id="ann-kind">
-            <button data-kind="info" class="on">Info</button>
-            <button data-kind="update">Update</button>
-            <button data-kind="warning">Warning</button>
-          </div>
-          <label class="lbl" style="margin-top:2px">Show for</label>
-          <div class="seg" id="ann-life">
-            <button data-days="1">1 day</button>
-            <button data-days="3">3 days</button>
-            <button data-days="7" class="on">7 days</button>
-            <button data-days="30">30 days</button>
-            <button data-days="0">No expiry</button>
-          </div>
-          <button class="btn" id="ann-send"><i data-lucide="megaphone"></i> Publish</button>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-head"><h3>Published</h3><small id="ann-count"></small></div>
-        <div id="ann-list"></div>
-      </div>
-    </section>
-
-    <!-- ACTIVITY -->
     <section id="logs" class="page">
       <div class="panel">
         <div class="panel-head"><h3>Admin activity</h3><small>last 100</small></div>
@@ -453,14 +531,14 @@
     </section>
   </main>
 
-  <!-- Dock -->
   <nav class="dock" id="dock" hidden>
     <div class="dock-inner">
       <button class="nav-item active" data-target="overview" aria-label="Overview"><i data-lucide="layout-dashboard"></i></button>
       <button class="nav-item" data-target="users" aria-label="Users"><i data-lucide="users"></i></button>
+      <button class="nav-item" data-target="questions" aria-label="Questions"><i data-lucide="help-circle"></i></button>
+      <button class="nav-item" data-target="content" aria-label="Content"><i data-lucide="book-open"></i></button>
       <button class="nav-item" data-target="payments" aria-label="Payments"><i data-lucide="wallet"></i><i class="nav-badge" id="pay-badge" hidden></i></button>
       <button class="nav-item" data-target="admins" aria-label="Admins"><i data-lucide="shield-check"></i></button>
-      <button class="nav-item" data-target="announce" aria-label="Announcements"><i data-lucide="megaphone"></i></button>
       <button class="nav-item" data-target="logs" aria-label="Activity"><i data-lucide="scroll-text"></i></button>
     </div>
   </nav>
@@ -495,9 +573,26 @@
     let me = null;
     let users = [];
     let stats = null;
-    const ui = { filter: 'all', q: '', sort: 'new', shown: 40, annKind: 'info' };
+    let consoleMode = false;
+    const ui = { filter: 'all', q: '', sort: 'new', shown: 40, cTab: 'notes', chType: 'daily' };
 
-    /* ---------- helpers ---------- */
+    let allQs = [];
+    let qFilter = { subject: 'All', difficulty: 'all', q: '' };
+    let qViewMode = 'years';
+    let currentYearFilter = 'all';
+
+    let allNotes = [];
+    let allChallenges = [];
+    let allAnns = [];
+
+    const SUBJECTS = [
+      'Mathematics', 'English', 'Physics', 'Chemistry', 'Biology',
+      'Economics', 'Government', 'Literature', 'CRS / IRS', 'History',
+      'Accounting', 'Commerce', 'Further Maths', 'Computer Studies',
+      'Agricultural Science', 'Fine Arts', 'French', 'Geography', 'Music', 
+      'Arabic', 'Hausa', 'Igbo', 'Yoruba', 'Home Economics', 'Technical Drawing'
+    ];
+
     const isSusp = u => u.status === 'suspended' && (!u.suspended_until || new Date(u.suspended_until) > new Date());
     const isPrem = u => u.plan === 'premium' && (!u.plan_expires_at || new Date(u.plan_expires_at) > new Date());
     const isAdm = u => u.role === 'admin';
@@ -519,7 +614,6 @@
     }
     const untilTxt = d => d ? fmtDate(d) : 'until lifted';
 
-    /* ---------- toast + modal ---------- */
     const toastEl = $('#toast'); let toastTimer;
     function toast(msg, isErr) {
       toastEl.textContent = msg;
@@ -555,13 +649,13 @@
       modalEl.hidden = false;
       $('.modal-card', modalEl).scrollTop = 0;
       icons();
+      renderMathInElement($('#m-body'), { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] });
       return $('#m-body');
     }
     function closeModal() { modalEl.hidden = true; }
     modalEl.addEventListener('click', e => { if (e.target.matches('[data-close]')) closeModal(); });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modalEl.hidden) closeModal(); });
 
-    /* ---------- data ---------- */
     async function rpc(name, args) {
       const { data, error } = await sb.rpc(name, args || {});
       if (error) throw error;
@@ -577,7 +671,6 @@
       finally { btn.classList.remove('spin'); }
     }
 
-    /* ---------- overview ---------- */
     function statCard(cls, label, sub, val, icon, go) {
       return `<article class="card sc ${cls}" data-go="${go}">
         <div class="card-head"><div><h3>${label}</h3><p class="sub">${sub}</p></div><span class="ic"><i data-lucide="${icon}"></i></span></div>
@@ -637,7 +730,31 @@
       }));
     }
 
-    /* ---------- users ---------- */
+    $('#console-btn').addEventListener('click', () => {
+      consoleMode = !consoleMode;
+      $('#console-btn').classList.toggle('on', consoleMode);
+      $('#console-panel').style.display = consoleMode ? 'block' : 'none';
+      toast(consoleMode ? 'Console mode enabled' : 'Console mode disabled');
+    });
+    
+    $('#console-inject-btn').addEventListener('click', async () => {
+      try {
+        await sb.from('tests').insert([{
+           user_id: me.id, subject: 'Mathematics', score: 18, total: 20, mode: 'practice', date: new Date().toISOString()
+        }]);
+        toast('Injected test score');
+        reloadCore();
+      } catch(e) { fail(e); }
+    });
+
+    $('#console-reset-btn').addEventListener('click', async () => {
+      try {
+        await sb.from('profiles').update({ streak_count: 0 }).eq('id', me.id);
+        toast('Streak reset to 0');
+        reloadCore();
+      } catch(e) { fail(e); }
+    });
+
     const FILTERS = [
       ['all', 'All', () => true],
       ['active', 'Active', u => u.last_sign_in_at && Date.now() - new Date(u.last_sign_in_at).getTime() < 7 * DAY],
@@ -708,7 +825,453 @@
       toast(`Exported ${rows.length - 1} accounts`);
     }
 
-    /* ---------- user sheet ---------- */
+    async function loadQs() {
+      const root = $('#q-list');
+      if (!allQs.length) root.innerHTML = '<p class="empty">Loading…</p>';
+      try {
+        const { data, error } = await sb.from('questions').select('*').order('created_at', { ascending: false }).limit(2000);
+        if (error) throw error;
+        allQs = data || [];
+        renderQs();
+      } catch (e) {
+        fail(e);
+        root.innerHTML = '<p class="empty">Could not load questions.</p>';
+      }
+    }
+
+    function renderQs() {
+      const counts = {};
+      allQs.forEach(q => { counts[q.subject] = (counts[q.subject] || 0) + 1; });
+      const allSubjects = Array.from(new Set([...SUBJECTS, ...Object.keys(counts)])).sort();
+      const pills = ['All', ...allSubjects].filter(s => s === 'All' || counts[s]);
+      
+      $('#q-subject-pills').innerHTML = pills.map(s => {
+        const n = s === 'All' ? allQs.length : counts[s];
+        return `<button class="pill ${qFilter.subject === s ? 'active' : ''}" data-subj="${s}">${s} <span class="count">${n}</span></button>`;
+      }).join('');
+      
+      $$('#q-subject-pills .pill').forEach(b => b.addEventListener('click', () => { 
+        qFilter.subject = b.dataset.subj; 
+        qViewMode = 'years';
+        currentYearFilter = 'all';
+        renderQs(); 
+      }));
+
+      $$('#q-diff-seg button').forEach(b => b.classList.toggle('on', b.dataset.diff === qFilter.difficulty));
+
+      let filtered = allQs;
+      if (qFilter.subject !== 'All') filtered = filtered.filter(q => q.subject === qFilter.subject);
+      if (qFilter.difficulty !== 'all') filtered = filtered.filter(q => q.difficulty === qFilter.difficulty);
+      if (qFilter.q.trim()) {
+        const term = qFilter.q.toLowerCase();
+        filtered = filtered.filter(q => q.question.toLowerCase().includes(term));
+      }
+
+      const root = $('#q-list');
+
+      if (qViewMode === 'years') {
+        $('#q-tool-year').hidden = false;
+        $('#q-tool-list').hidden = true;
+
+        const yearCounts = {};
+        filtered.forEach(q => {
+          const y = q.year || 'Unknown';
+          yearCounts[y] = (yearCounts[y] || 0) + 1;
+        });
+
+        const years = Object.keys(yearCounts).sort((a,b) => b - a);
+        
+        if (!years.length) {
+          root.innerHTML = '<p class="empty">No questions match.</p>';
+          return;
+        }
+
+        root.innerHTML = `<div class="grid" style="padding:16px;">` + years.map(y => `
+          <div class="year-card" data-year="${y}">
+            <h4>${y}</h4>
+            <p>${yearCounts[y]} questions</p>
+          </div>
+        `).join('') + `</div>`;
+
+        $$('.year-card', root).forEach(c => c.addEventListener('click', () => {
+          currentYearFilter = c.dataset.year;
+          qViewMode = 'list';
+          renderQs();
+        }));
+
+      } else {
+        $('#q-tool-year').hidden = true;
+        $('#q-tool-list').hidden = false;
+        $('#q-year-label').textContent = currentYearFilter === 'Unknown' ? 'Unknown Year' : currentYearFilter;
+
+        const yearQs = filtered.filter(q => (q.year || 'Unknown') == currentYearFilter);
+
+        if (!yearQs.length) {
+          root.innerHTML = '<p class="empty">No questions found for this year.</p>';
+          return;
+        }
+
+        root.innerHTML = yearQs.map(q => `
+          <div class="q-item">
+            <div class="q-item-top">
+              <div class="q-item-text">${esc(q.question)}</div>
+              <div class="q-item-actions">
+                <button class="q-mini-btn" data-edit="${esc(q.id)}" aria-label="Edit"><i data-lucide="pencil"></i></button>
+                <button class="q-mini-btn del" data-del="${esc(q.id)}" aria-label="Delete"><i data-lucide="trash-2"></i></button>
+              </div>
+            </div>
+            <div class="q-item-meta">
+              <span class="q-tag sub">${esc(q.subject)}</span>
+              <span class="q-tag ${q.difficulty}">${esc(q.difficulty)}</span>
+              <span class="q-tag" style="color:var(--green)">Ans: ${esc(q.answer.toUpperCase())}</span>
+            </div>
+          </div>
+        `).join('');
+        
+        icons();
+        renderMathInElement(root, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] });
+
+        $$('[data-edit]', root).forEach(b => b.addEventListener('click', () => openQModal(b.dataset.edit)));
+        $$('[data-del]', root).forEach(b => b.addEventListener('click', () => deleteQ(b.dataset.del)));
+      }
+    }
+
+    $('#q-back-btn').addEventListener('click', () => { qViewMode = 'years'; renderQs(); });
+
+    function openQModal(id) {
+      const isEdit = !!id;
+      const q = isEdit ? allQs.find(x => x.id === id) : null;
+      
+      const body = `
+        <div class="stack" style="max-height:60vh;overflow-y:auto;padding:4px">
+          <div class="two-col">
+            <div class="stack">
+              <label class="lbl">Subject</label>
+              <input class="field" id="q-f-subj" list="subj-list" value="${q ? esc(q.subject) : (qFilter.subject !== 'All' ? qFilter.subject : '')}" placeholder="e.g. Fine Arts">
+              <datalist id="subj-list">
+                ${SUBJECTS.map(s => `<option value="${s}">`).join('')}
+              </datalist>
+            </div>
+            <div class="stack">
+              <label class="lbl">Difficulty</label>
+              <select class="field" id="q-f-diff">
+                <option value="easy" ${q && q.difficulty === 'easy' ? 'selected' : ''}>Easy</option>
+                <option value="medium" ${q && q.difficulty === 'medium' ? 'selected' : ''}>Medium</option>
+                <option value="hard" ${q && q.difficulty === 'hard' ? 'selected' : ''}>Hard</option>
+              </select>
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="stack">
+              <label class="lbl">Year</label>
+              <input class="field" id="q-f-year" type="number" placeholder="e.g. 2023" value="${q ? q.year || '' : (currentYearFilter !== 'Unknown' ? currentYearFilter : '2025')}">
+            </div>
+            <div class="stack">
+              <label class="lbl">Section/Topic</label>
+              <input class="field" id="q-f-section" type="text" placeholder="e.g. Mechanics" value="${q ? q.section || '' : ''}">
+            </div>
+          </div>
+          <label class="lbl">Question (Use $ for math)</label>
+          <textarea class="field" id="q-f-q" style="min-height:80px">${q ? q.question : ''}</textarea>
+          
+          <div class="two-col">
+            <div class="stack"><label class="lbl">Option A</label><input class="field" id="q-f-a" value="${q ? q.option_a : ''}"></div>
+            <div class="stack"><label class="lbl">Option B</label><input class="field" id="q-f-b" value="${q ? q.option_b : ''}"></div>
+          </div>
+          <div class="two-col">
+            <div class="stack"><label class="lbl">Option C</label><input class="field" id="q-f-c" value="${q ? q.option_c : ''}"></div>
+            <div class="stack"><label class="lbl">Option D</label><input class="field" id="q-f-d" value="${q ? q.option_d : ''}"></div>
+          </div>
+          
+          <div class="two-col">
+            <div class="stack">
+              <label class="lbl">Correct Answer</label>
+              <select class="field" id="q-f-ans">
+                <option value="a" ${q && q.answer === 'a' ? 'selected' : ''}>A</option>
+                <option value="b" ${q && q.answer === 'b' ? 'selected' : ''}>B</option>
+                <option value="c" ${q && q.answer === 'c' ? 'selected' : ''}>C</option>
+                <option value="d" ${q && q.answer === 'd' ? 'selected' : ''}>D</option>
+              </select>
+            </div>
+            <div class="stack">
+              <label class="lbl">Image URL (optional)</label>
+              <input class="field" id="q-f-img" type="url" placeholder="https://..." value="${q ? q.image_url || '' : ''}">
+            </div>
+          </div>
+
+          <label class="lbl">Explanation (Optional, supports math)</label>
+          <textarea class="field" id="q-f-exp" style="min-height:60px">${q ? q.explanation || '' : ''}</textarea>
+        </div>
+      `;
+
+      const root = openModal({
+        title: isEdit ? 'Edit Question' : 'New Question',
+        body,
+        actions: [
+          { label: 'Save Question', style: 'primary', close: false, onClick: async () => {
+            const payload = {
+              subject: $('#q-f-subj', root).value.trim(),
+              difficulty: $('#q-f-diff', root).value,
+              year: parseInt($('#q-f-year', root).value) || null,
+              section: $('#q-f-section', root).value.trim() || null,
+              question: $('#q-f-q', root).value.trim(),
+              option_a: $('#q-f-a', root).value.trim(),
+              option_b: $('#q-f-b', root).value.trim(),
+              option_c: $('#q-f-c', root).value.trim(),
+              option_d: $('#q-f-d', root).value.trim(),
+              answer: $('#q-f-ans', root).value,
+              image_url: $('#q-f-img', root).value.trim() || null,
+              explanation: $('#q-f-exp', root).value.trim() || null
+            };
+            if (!payload.subject) return toast('Subject is required', true);
+            if (!payload.question || !payload.option_a) return toast('Fill at least the question and option A', true);
+            
+            const btn = $('.modal-actions .primary', modalEl);
+            btn.disabled = true; btn.textContent = 'Saving...';
+            
+            const query = isEdit ? sb.from('questions').update(payload).eq('id', id) : sb.from('questions').insert([payload]);
+            const { error } = await query;
+            
+            btn.disabled = false; btn.textContent = 'Save Question';
+            if (error) { toast(error.message, true); return; }
+            
+            closeModal();
+            toast(isEdit ? 'Question updated' : 'Question added');
+            loadQs();
+          } },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
+    }
+
+    function deleteQ(id) {
+      const q = allQs.find(x => x.id === id);
+      if (!q) return;
+      openModal({
+        title: 'Delete question?',
+        body: `<p class="txt">Are you sure you want to delete this question? This cannot be undone.</p>
+               <div style="background:rgba(255,255,255,0.05);padding:12px;border-radius:12px;margin-top:10px;font-size:.85rem;color:#b4b4b4">${esc(q.question)}</div>`,
+        actions: [
+          { label: 'Delete', style: 'danger', close: false, onClick: async (e) => {
+              const btn = $('.modal-actions .danger', modalEl);
+              btn.disabled = true; btn.textContent = 'Deleting...';
+              const { error } = await sb.from('questions').delete().eq('id', id);
+              if (error) { btn.disabled = false; btn.textContent = 'Delete'; toast(error.message, true); return; }
+              closeModal();
+              toast('Question deleted');
+              loadQs();
+          } },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
+    }
+
+    function openJsonUpload() {
+      const body = `
+        <p class="txt">Paste an array of question objects.</p>
+        <pre style="background:rgba(0,0,0,0.4);padding:12px;border-radius:12px;font-size:.75rem;color:#8DB9EA;margin:12px 0;overflow-x:auto">[
+  {
+    "subject": "Mathematics",
+    "difficulty": "medium",
+    "year": 2023,
+    "section": "Algebra",
+    "question": "Solve for $x$: $2x + 5 = 15$",
+    "option_a": "5", "option_b": "10", "option_c": "15", "option_d": "20",
+    "answer": "a",
+    "explanation": "2x = 10, so x = 5"
+  }
+]</pre>
+        <textarea class="field" id="json-in" style="min-height:150px;font-family:monospace" placeholder="[{...}, {...}]"></textarea>
+      `;
+      const root = openModal({
+        title: 'Bulk Upload JSON',
+        body,
+        actions: [
+          { label: 'Upload Questions', style: 'primary', close: false, onClick: async () => {
+            let parsed = [];
+            try {
+              parsed = JSON.parse($('#json-in', root).value);
+              if (!Array.isArray(parsed)) throw new Error('Must be an array');
+            } catch (e) { return toast('Invalid JSON format', true); }
+            if (!parsed.length) return toast('Array is empty', true);
+
+            const btn = $('.modal-actions .primary', modalEl);
+            btn.disabled = true; btn.textContent = 'Uploading...';
+
+            const { error } = await sb.from('questions').insert(parsed);
+
+            btn.disabled = false; btn.textContent = 'Upload Questions';
+            if (error) { toast(error.message, true); return; }
+            
+            closeModal();
+            toast(`Uploaded ${parsed.length} questions`);
+            loadQs();
+          } },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
+    }
+
+    $('#q-add-btn').addEventListener('click', () => openQModal(null));
+    $('#q-upload-btn').addEventListener('click', openJsonUpload);
+    let qSearchT;
+    $('#q-search').addEventListener('input', e => {
+      clearTimeout(qSearchT);
+      qSearchT = setTimeout(() => { 
+        qFilter.q = e.target.value; 
+        qViewMode = 'years';
+        renderQs(); 
+      }, 200);
+    });
+    $$('#q-diff-seg button').forEach(b => b.addEventListener('click', () => { qFilter.difficulty = b.dataset.diff; renderQs(); }));
+
+    /* --- Content Logic --- */
+    $$('#content-tabs button').forEach(b => b.addEventListener('click', () => {
+      ui.cTab = b.dataset.c;
+      $$('#content-tabs button').forEach(x => x.classList.toggle('on', x === b));
+      ['notes', 'challenges', 'announce'].forEach(t => $(`#c-${t}`).style.display = t === ui.cTab ? 'block' : 'none');
+      if (ui.cTab === 'notes') loadNotes();
+      if (ui.cTab === 'challenges') loadChallenges();
+      if (ui.cTab === 'announce') loadAnns();
+    }));
+
+    async function loadNotes() {
+      const root = $('#note-list');
+      try {
+        const { data, error } = await sb.from('daily_notes').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        allNotes = data || [];
+        $('#note-count').textContent = allNotes.length + ' total';
+        if (!allNotes.length) { root.innerHTML = '<p class="empty">No notes yet.</p>'; return; }
+        root.innerHTML = allNotes.map(n => `
+          <div class="ann">
+            <div class="ann-top"><h4>${esc(n.title)}</h4><em class="tag ${n.active ? 't-new' : ''}">${n.active ? 'Live' : 'Hidden'}</em></div>
+            <p>${esc(n.content)}</p>
+            <div class="ann-actions">
+              <button class="mini" onclick="toggleNote('${n.id}', ${n.active})">${n.active ? 'Hide' : 'Show'}</button>
+              <button class="mini del" onclick="deleteNote('${n.id}')">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) { fail(e); root.innerHTML = '<p class="empty">Could not load notes.</p>'; }
+    }
+    window.toggleNote = async (id, active) => {
+      await sb.from('daily_notes').update({ active: !active }).eq('id', id);
+      loadNotes();
+    };
+    window.deleteNote = async (id) => {
+      if(!confirm('Delete this note?')) return;
+      await sb.from('daily_notes').delete().eq('id', id);
+      loadNotes();
+    };
+
+    $('#note-save').addEventListener('click', async () => {
+      const title = $('#note-title').value.trim();
+      const content = $('#note-content').value.trim();
+      const subject = $('#note-subject').value.trim() || null;
+      const short_test_count = parseInt($('#note-short').value) || 0;
+      if (!title || !content) return toast('Title and content required', true);
+
+      const { error } = await sb.from('daily_notes').insert([{ title, content, subject, short_test_count, active: true }]);
+      if (error) return fail(error);
+      
+      $('#note-title').value = ''; $('#note-content').value = ''; $('#note-subject').value = ''; $('#note-short').value = '0';
+      toast('Note saved');
+      loadNotes();
+    });
+
+    async function loadChallenges() {
+      const root = $('#ch-list');
+      try {
+        const { data, error } = await sb.from('challenges').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        allChallenges = data || [];
+        $('#ch-count').textContent = allChallenges.length + ' total';
+        if (!allChallenges.length) { root.innerHTML = '<p class="empty">No challenges yet.</p>'; return; }
+        root.innerHTML = allChallenges.map(c => `
+          <div class="ann">
+            <div class="ann-top"><h4>${esc(c.title)}</h4><em class="tag ${c.active ? 't-new' : ''}">${c.active ? 'Active' : 'Hidden'}</em></div>
+            <p>${esc(c.description || '')} (Target: ${c.target})</p>
+            <div class="ann-actions">
+              <button class="mini" onclick="toggleCh('${c.id}', ${c.active})">${c.active ? 'Hide' : 'Show'}</button>
+              <button class="mini del" onclick="deleteCh('${c.id}')">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) { fail(e); root.innerHTML = '<p class="empty">Could not load challenges.</p>'; }
+    }
+    window.toggleCh = async (id, active) => {
+      await sb.from('challenges').update({ active: !active }).eq('id', id);
+      loadChallenges();
+    };
+    window.deleteCh = async (id) => {
+      if(!confirm('Delete this challenge?')) return;
+      await sb.from('challenges').delete().eq('id', id);
+      loadChallenges();
+    };
+
+    $$('#ch-type button').forEach(b => b.addEventListener('click', () => {
+      ui.chType = b.dataset.t;
+      $$('#ch-type button').forEach(x => x.classList.toggle('on', x === b));
+    }));
+
+    $('#ch-save').addEventListener('click', async () => {
+      const title = $('#ch-title').value.trim();
+      const description = $('#ch-desc').value.trim();
+      const target = parseInt($('#ch-target').value) || 1;
+      const reward = $('#ch-reward').value.trim();
+      if (!title) return toast('Title required', true);
+
+      const { error } = await sb.from('challenges').insert([{ title, description, target, reward, type: ui.chType, active: true }]);
+      if (error) return fail(error);
+
+      $('#ch-title').value = ''; $('#ch-desc').value = ''; $('#ch-target').value = '3'; $('#ch-reward').value = '';
+      toast('Challenge created');
+      loadChallenges();
+    });
+
+    async function loadAnns() {
+      const root = $('#ann-list');
+      try {
+        const { data, error } = await sb.from('announcements').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        allAnns = data || [];
+        $('#ann-count').textContent = allAnns.length + ' total';
+        if (!allAnns.length) { root.innerHTML = '<p class="empty">No announcements yet.</p>'; return; }
+        root.innerHTML = allAnns.map(a => `
+          <div class="ann">
+            <div class="ann-top"><h4>${esc(a.title)}</h4><em class="tag ${a.active ? 't-new' : ''}">${a.active ? 'Active' : 'Hidden'}</em></div>
+            <p>${esc(a.body)}</p>
+            <div class="ann-actions">
+              <button class="mini" onclick="toggleAnn('${a.id}', ${a.active})">${a.active ? 'Hide' : 'Show'}</button>
+              <button class="mini del" onclick="deleteAnn('${a.id}')">Delete</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) { fail(e); root.innerHTML = '<p class="empty">Could not load announcements.</p>'; }
+    }
+    window.toggleAnn = async (id, active) => {
+      await sb.from('announcements').update({ active: !active }).eq('id', id);
+      loadAnns();
+    };
+    window.deleteAnn = async (id) => {
+      if(!confirm('Delete this announcement?')) return;
+      await sb.from('announcements').delete().eq('id', id);
+      loadAnns();
+    };
+
+    $('#ann-save').addEventListener('click', async () => {
+      const title = $('#ann-title').value.trim();
+      const body = $('#ann-body').value.trim();
+      if (!title || !body) return toast('Title and body required', true);
+      const { error } = await sb.from('announcements').insert([{ title, body, active: true }]);
+      if (error) return fail(error);
+      $('#ann-title').value = ''; $('#ann-body').value = '';
+      toast('Announcement published');
+      loadAnns();
+    });
+
+    /* --- User Sheet --- */
     function menuItem(act, icon, title, sub, cls) {
       return `<button class="menu-item ${cls || ''}" data-act="${act}"><span class="menu-ic"><i data-lucide="${icon}"></i></span><span class="menu-body"><h4>${title}</h4><p>${sub}</p></span><span class="chev"><i data-lucide="chevron-right"></i></span></button>`;
     }
@@ -718,10 +1281,6 @@
       renderAll();
       if (users.find(u => u.id === id)) openUser(id);
     }
-    async function copy(text, label) {
-      try { await navigator.clipboard.writeText(text); toast(label + ' copied'); }
-      catch (e) { toast('Copy failed', true); }
-    }
 
     function openUser(id) {
       const u = users.find(x => x.id === id);
@@ -730,7 +1289,7 @@
       const adm = isAdm(u);
       const noProfile = !u.has_profile;
       const owner = !!u.is_super;
-      const lockedAdm = (adm && !self) || owner; // other admins: remove admin first; owner is always protected
+      const lockedAdm = (adm && !self) || owner;
       const susp = isSusp(u), prem = isPrem(u);
 
       const lines = [
@@ -751,6 +1310,11 @@
       items.push(menuItem('tests', 'list-checks', 'View tests', `${fmtN(u.tests_count)} on record`));
       items.push(menuItem('copy-email', 'mail', 'Copy email', esc(u.email)));
       items.push(menuItem('copy-id', 'fingerprint', 'Copy user ID', 'For support lookups'));
+      
+      if (consoleMode) {
+        items.push(menuItem('edit-stats', 'settings-2', 'Edit Stats (Console)', 'Manually tweak streak and averages', 'gold'));
+      }
+
       if (!noProfile) {
         items.push(menuItem('plan', 'crown', prem ? 'Change or end premium' : 'Give premium', prem ? 'Currently premium' : 'Unlock the subscription', 'gold'));
         items.push(menuItem('role', adm ? 'shield-off' : 'shield-plus', adm ? 'Remove admin' : 'Make admin', owner ? 'Owner account is protected' : adm ? (self ? "You can't remove yourself" : 'Back to a normal student') : 'Full access to this console', (self && adm) || owner ? 'locked' : ''));
@@ -767,7 +1331,7 @@
         <div class="p-stats">
           <div><div class="v">${fmtN(u.tests_count)}</div><div class="k">Tests</div></div>
           <div><div class="v">${u.avg_pct == null ? '—' : u.avg_pct + '%'}</div><div class="k">Average</div></div>
-          <div><div class="v">${u.target_score ? u.target_score + '+' : '—'}</div><div class="k">Target</div></div>
+          <div><div class="v">${u.streak_count || 0}</div><div class="k">Streak</div></div>
         </div>
         <div class="info">${lines.map(l => `<div class="line"><span>${l[0]}</span><span>${l[0] === 'Reason' ? l[1] : esc(l[1])}</span></div>`).join('')}</div>
         ${noProfile ? '<p class="txt" style="margin:10px 4px">This person signed up but never finished setup, so profile actions are hidden.</p>' : ''}
@@ -776,12 +1340,13 @@
       const root = openModal({ title: '', body, actions: [{ label: 'Close', style: 'ghost' }] });
       const on = (a, fn) => { const el = $(`[data-act="${a}"]`, root); if (el) el.addEventListener('click', fn); };
 
-      on('copy-email', () => copy(u.email, 'Email'));
-      on('copy-id', () => copy(u.id, 'User ID'));
+      on('copy-email', () => { navigator.clipboard.writeText(u.email); toast('Copied'); });
+      on('copy-id', () => { navigator.clipboard.writeText(u.id); toast('Copied'); });
       on('tests', () => showTests(u));
       on('plan', () => planSheet(u));
       on('role', () => roleSheet(u));
       on('suspend', () => suspendSheet(u));
+      on('edit-stats', () => editStatsSheet(u));
       on('unsuspend', () => confirmSheet(u, {
         title: 'Lift suspension?', text: `${dname(u)} will be able to sign in again right away.`, label: 'Lift suspension', style: 'primary',
         run: () => rpc('admin_unsuspend', { target: u.id }), done: 'Suspension lifted'
@@ -791,6 +1356,30 @@
         run: () => rpc('admin_reset_progress', { target: u.id }), done: 'Progress reset'
       }));
       on('delete', () => deleteSheet(u));
+    }
+
+    function editStatsSheet(u) {
+      const root = openModal({
+        title: 'Edit Stats',
+        body: `<p class="txt">Modify user stats manually.</p>
+               <label class="lbl">Streak Count</label>
+               <input class="field" id="ed-streak" type="number" value="${u.streak_count || 0}" />
+               <label class="lbl" style="margin-top:10px">Avg Score (%)</label>
+               <input class="field" id="ed-avg" type="number" value="${u.avg_pct || 0}" />
+               <label class="lbl" style="margin-top:10px">Tests Count</label>
+               <input class="field" id="ed-tests" type="number" value="${u.tests_count || 0}" />`,
+        actions: [
+          { label: 'Save Stats', style: 'primary', onClick: async () => {
+            const streak = parseInt($('#ed-streak', root).value) || 0;
+            const { error } = await sb.from('profiles').update({ streak_count: streak }).eq('id', u.id);
+            if (error) { toast(error.message, true); return; }
+            toast('Stats updated');
+            closeModal();
+            afterAction(u.id, 'Stats tweaked');
+          } },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
     }
 
     function backTo(u) { return { label: 'Back', style: 'ghost', onClick: () => { openUser(u.id); return false; } }; }
@@ -906,7 +1495,6 @@
       });
     }
 
-    /* ---------- admins ---------- */
     function renderAdmins() {
       const list = users.filter(isAdm);
       $('#admin-count').textContent = list.length + (list.length === 1 ? ' admin' : ' admins');
@@ -926,76 +1514,6 @@
       input.value = '';
     }
 
-    /* ---------- announcements ---------- */
-    const KIND_ICON = { info: 'info', update: 'sparkles', warning: 'triangle-alert' };
-    async function loadAnn() {
-      const root = $('#ann-list');
-      try {
-        const { data, error } = await sb.from('announcements').select('*').order('created_at', { ascending: false }).limit(50);
-        if (error) throw error;
-        $('#ann-count').textContent = data.length + ' total';
-        if (!data.length) { root.innerHTML = '<p class="empty">No announcements yet.<br/>Publish one and students see it next time they open the app.</p>'; return; }
-        root.innerHTML = data.map(a => `<div class="ann">
-          <div class="ann-top"><h4>${esc(a.title)}</h4><em class="tag ${annState(a)[1]}">${annState(a)[0]}</em></div>
-          <p>${esc(a.body)}</p>
-          <div class="ann-actions">
-            <button class="mini ${a.active ? 'live' : ''}" data-toggle="${esc(a.id)}" data-on="${a.active ? 1 : 0}"><i data-lucide="${a.active ? 'eye-off' : 'eye'}"></i>${a.active ? 'Hide' : 'Show'}</button>
-            <button class="mini del" data-del="${esc(a.id)}"><i data-lucide="trash-2"></i>Delete</button>
-            <span style="margin-left:auto;color:var(--muted);font-size:.76rem;align-self:center">${ago(a.created_at)}${annLeft(a)}</span>
-          </div></div>`).join('');
-        icons();
-        $$('[data-toggle]', root).forEach(b => b.addEventListener('click', async () => {
-          const { error } = await sb.from('announcements').update({ active: b.dataset.on !== '1' }).eq('id', b.dataset.toggle);
-          if (error) return fail(error);
-          loadAnn();
-        }));
-        $$('[data-del]', root).forEach(b => b.addEventListener('click', () => openModal({
-          title: 'Delete announcement?', body: '<p class="txt">Students will no longer see it.</p>',
-          actions: [{ label: 'Delete', style: 'danger', onClick: async () => {
-            const { error } = await sb.from('announcements').delete().eq('id', b.dataset.del);
-            if (error) throw error;
-            toast('Deleted'); loadAnn();
-          } }, { label: 'Cancel', style: 'ghost' }]
-        })));
-      } catch (e) { fail(e); root.innerHTML = '<p class="empty">Could not load announcements.</p>'; }
-    }
-    async function sendAnn() {
-      const title = $('#ann-title').value.trim(), body = $('#ann-body').value.trim();
-      if (!title || !body) return toast('Add a title and a message', true);
-      const btn = $('#ann-send'); btn.disabled = true;
-      const lifeBtn = $('#ann-life .on'); const lifeDays = lifeBtn ? +lifeBtn.dataset.days : 7;
-      const expires_at = lifeDays ? new Date(Date.now() + lifeDays * DAY).toISOString() : null;
-      const { error } = await sb.from('announcements').insert([{ title, body, kind: ui.annKind, active: true, expires_at }]);
-      btn.disabled = false;
-      if (error) return fail(error);
-      $('#ann-title').value = ''; $('#ann-body').value = '';
-      toast('Published'); loadAnn();
-    }
-
-    /* ---------- activity ---------- */
-    const LOG = {
-      make_admin: ['shield-plus', 'made admin'], remove_admin: ['shield-off', 'removed admin from'],
-      suspend: ['pause-circle', 'suspended'], unsuspend: ['play-circle', 'lifted suspension for'],
-      set_plan: ['crown', 'changed plan for'], reset_progress: ['rotate-ccw', 'reset progress for'],
-      delete_user: ['trash-2', 'deleted'],
-      payment_approved: ['badge-check', 'approved payment for'], payment_rejected: ['x-circle', 'rejected payment for']
-    };
-    async function loadLogs() {
-      const root = $('#log-list');
-      try {
-        const { data, error } = await sb.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(100);
-        if (error) throw error;
-        if (!data.length) { root.innerHTML = '<p class="empty">No admin actions yet.</p>'; return; }
-        root.innerHTML = data.map(l => {
-          const m = LOG[l.action] || ['activity', l.action];
-          const who = (l.admin_email || 'An admin').split('@')[0];
-          return `<div class="log"><span class="menu-ic"><i data-lucide="${m[0]}"></i></span><div><h4><b>${esc(who)}</b> ${esc(m[1])} <b>${esc(l.target_email || 'an account')}</b></h4><p>${l.details ? esc(l.details) + ' · ' : ''}${ago(l.created_at)}</p></div></div>`;
-        }).join('');
-        icons();
-      } catch (e) { fail(e); root.innerHTML = '<p class="empty">Could not load activity.</p>'; }
-    }
-
-    /* ---------- payments ---------- */
     const naira = n => '₦' + Number(n || 0).toLocaleString();
     const refOf = id => 'STR-' + String(id).replace(/-/g, '').slice(0, 5).toUpperCase();
     const SET_KEYS = ['price', 'premium_days', 'trial_days', 'bank_name', 'account_number', 'account_name'];
@@ -1007,16 +1525,7 @@
       return (end > Date.now() ? 'Ends ' : 'Ended ') + fmtDate(end);
     }
     function annState(a) {
-      const exp = a.expires_at && new Date(a.expires_at) <= new Date();
-      if (exp) return ['Expired', 't-susp'];
       return a.active ? ['Live', 't-new'] : ['Hidden', ''];
-    }
-    function annLeft(a) {
-      if (!a.expires_at) return '';
-      const ms = new Date(a.expires_at).getTime() - Date.now();
-      if (ms <= 0) return ' · expired';
-      const d = Math.ceil(ms / DAY);
-      return ' · ends in ' + d + (d === 1 ? ' day' : ' days');
     }
     function setBadge(n) {
       const b = $('#pay-badge');
@@ -1173,11 +1682,10 @@
     $('#set-save').addEventListener('click', saveSettings);
     $('#cleanup-btn').addEventListener('click', () => runCleanup(true));
 
-    /* ---------- tabs ---------- */
-    const TITLES = { overview: 'Overview', users: 'Users', payments: 'Payments', admins: 'Admins', announce: 'Announcements', logs: 'Activity' };
+    const TITLES = { overview: 'Overview', users: 'Users', questions: 'Questions', content: 'Content', payments: 'Payments', admins: 'Admins', logs: 'Activity' };
     let active = 'overview';
     function goTo(id) {
-      if (id === active && id !== 'users') return;
+      if (id === active && id !== 'users' && id !== 'questions' && id !== 'content') return;
       active = id;
       $$('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.target === id));
       $$('.page').forEach(p => { p.classList.toggle('active', p.id === id); p.classList.remove('in'); });
@@ -1186,37 +1694,35 @@
       $('#page-title').textContent = TITLES[id];
       window.scrollTo({ top: 0, behavior: 'auto' });
       if (id === 'users') renderUsers();
+      if (id === 'questions') { qViewMode = 'years'; loadQs(); }
+      if (id === 'content') {
+        if (ui.cTab === 'notes') loadNotes();
+        if (ui.cTab === 'challenges') loadChallenges();
+        if (ui.cTab === 'announce') loadAnns();
+      }
       if (id === 'payments') { loadPayments(); loadSettings(); }
-      if (id === 'announce') loadAnn();
       if (id === 'logs') loadLogs();
     }
     $$('.nav-item').forEach(b => b.addEventListener('click', () => goTo(b.dataset.target)));
 
     function renderAll() { renderOverview(); renderUsers(); renderAdmins(); setBadge(stats ? stats.pending_payments : 0); icons(); }
 
-    /* ---------- events ---------- */
     let searchT;
     $('#user-search').addEventListener('input', e => { clearTimeout(searchT); searchT = setTimeout(() => { ui.q = e.target.value; ui.shown = 40; renderUsers(); }, 160); });
     $$('#sort-seg button').forEach(b => b.addEventListener('click', () => { ui.sort = b.dataset.sort; renderUsers(); }));
     $('#export-btn').addEventListener('click', exportCsv);
     $('#admin-add-btn').addEventListener('click', addAdmin);
     $('#admin-email').addEventListener('keydown', e => { if (e.key === 'Enter') addAdmin(); });
-    $$('#ann-kind button').forEach(b => b.addEventListener('click', () => {
-      ui.annKind = b.dataset.kind;
-      $$('#ann-kind button').forEach(x => x.classList.toggle('on', x === b));
-    }));
-    $('#ann-send').addEventListener('click', sendAnn);
-    $$('#ann-life button').forEach(b => b.addEventListener('click', () => $$('#ann-life button').forEach(x => x.classList.toggle('on', x === b))));
     $('#refresh-btn').addEventListener('click', async () => {
       await reloadCore();
+      if (active === 'questions') loadQs();
+      if (active === 'content') goTo('content');
       if (active === 'payments') loadPayments();
-      if (active === 'announce') loadAnn();
       if (active === 'logs') loadLogs();
       toast('Refreshed');
     });
     $('#exit-btn').addEventListener('click', () => location.href = 'app.html');
 
-    /* ---------- boot ---------- */
     function gateShow(title, text, withBtn) {
       const g = $('#gate');
       g.classList.add('stop');
