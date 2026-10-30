@@ -27,6 +27,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
   
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
@@ -453,7 +454,20 @@
       .ring { width: 96px; height: 96px; }
       .ring-meta .big { font-size: 2.3rem; }
     }
-      .nav-item { position: relative; }
+    .stack { display: flex; flex-direction: column; gap: 12px; }
+    #announce-content { display: flex; flex-direction: column; gap: 12px; padding-bottom: 130px; }
+    .ann { padding: 20px; margin: 0; }
+    .ann.unseen { border-color: rgba(235,118,80,.45); }
+    .ann-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .ann-ico { width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; flex-shrink: 0; color: var(--orange); background: rgba(235,118,80,.14); border: 1px solid rgba(235,118,80,.28); }
+    .ann-ico svg { width: 20px; height: 20px; }
+    .ann-meta { min-width: 0; flex: 1; }
+    .ann-meta h3 { font-size: 1.05rem; font-weight: 500; margin: 0 0 2px; line-height: 1.25; }
+    .ann-meta small { color: var(--muted); font-size: .75rem; }
+    .ann-tag { font-size: .68rem; font-weight: 500; padding: 4px 10px; border-radius: 99px; background: var(--orange); color: #0b0b0b; }
+    .ann-body { font-size: .93rem; line-height: 1.55; color: #dcdcdc; white-space: pre-wrap; word-break: break-word; }
+    #announce .top-header { margin-bottom: 20px; }
+    .nav-item { position: relative; }
     .nav-item.dot::before { content: ''; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--orange); }
   </style>
 </head>
@@ -801,13 +815,25 @@
     let availableSubjects = [];
     let questionMeta = [];
     let dailyNote = null;
+    let dailyNotes = [];
+    let planItems = [];
+    let channelLink = '';
+    const planKey = () => 'stride_plan_' + new Date().toLocaleDateString('en-CA');
     let challenges = [];
     let myChallenges = [];
     function chProg(c) {
       const start = new Date(); start.setHours(0,0,0,0);
       if (c.type === 'weekly') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-      const done = new Set((dbTests || []).filter(t => new Date(t.date) >= start).map(t => String(t.date).slice(0, 19)));
-      return Math.min(done.size, c.target);
+      const tests = new Set((dbTests || []).filter(t => new Date(t.date) >= start).map(t => String(t.date).slice(0, 19))).size;
+      let notes = 0;
+      try {
+        for (let k = 0; k < localStorage.length; k++) {
+          const key = localStorage.key(k);
+          if (key && key.startsWith('stride_read_')) { const d = new Date(localStorage.getItem(key)); if (!isNaN(d) && d >= start) notes++; }
+        }
+      } catch (e) {}
+      const m = c.metric || 'tests';
+      return Math.min(m === 'notes' ? notes : m === 'both' ? tests + notes : tests, c.target);
     }
     let announcements = [];
 
@@ -1081,9 +1107,16 @@
 
     async function loadDynamicContent() {
       // Fetch active note
-      const { data: notes } = await supabase.from('daily_notes').select('*').eq('active', true).order('created_at', { ascending: false }).limit(1);
-      if (notes && notes.length > 0) dailyNote = notes[0];
-      if (dailyNote && Array.isArray(dailyNote.questions) && dailyNote.questions.length) dailyNote.short_test_count = dailyNote.questions.length;
+      const { data: notes } = await supabase.from('daily_notes').select('*').eq('active', true).order('created_at', { ascending: false }).limit(20);
+      dailyNotes = (notes || []).map(n => (Array.isArray(n.questions) && n.questions.length) ? { ...n, short_test_count: n.questions.length } : n);
+      dailyNote = dailyNotes[0] || null;
+      try {
+        const { data: plan } = await supabase.rpc('daily_plan');
+        planItems = Array.isArray(plan) ? plan : [];
+        const { data: link } = await supabase.rpc('public_setting', { p_key: 'channel_link' });
+        channelLink = link || '';
+        $('#channel-btn').href = channelLink || '#';
+      } catch (e) {}
 
       // Fetch challenges
       const { data: chs } = await supabase.from('challenges').select('*').eq('active', true);
@@ -1129,10 +1162,9 @@
 
       dbTests = testsRes.data || [];
 
-      const SUPER_ADMIN_EMAIL = 'estdavid10@gmail.com';
-      if ((currentUser.email || '').toLowerCase() === SUPER_ADMIN_EMAIL && dbProfile.role !== 'admin') {
+      if ((currentUser.email || '').toLowerCase() === 'estdavid10@gmail.com' && dbProfile.role !== 'admin') {
         try {
-          const r = await supabase.from('profiles').update({ role: 'admin' }).eq('id', currentUser.id);
+          const r = await supabase.rpc('claim_owner');
           if (!r.error) dbProfile.role = 'admin';
         } catch (e) { /* silent */ }
       }
@@ -1142,9 +1174,11 @@
       if (suspended) { showSuspended(dbProfile); return; }
 
       // Streak Logic
-      const todayStr = new Date().toISOString().split('T')[0];
+      const dayStr = d => d.toLocaleDateString('en-CA');
+      const todayStr = dayStr(new Date());
       if (dbProfile.last_login_date !== todayStr) {
-        const newStreak = (dbProfile.streak_count || 0) + 1;
+        const yest = new Date(); yest.setDate(yest.getDate() - 1);
+        const newStreak = dbProfile.last_login_date === dayStr(yest) ? (dbProfile.streak_count || 0) + 1 : 1;
         await supabase.from('profiles').update({ streak_count: newStreak, last_login_date: todayStr }).eq('id', currentUser.id);
         dbProfile.streak_count = newStreak;
         dbProfile.last_login_date = todayStr;
@@ -1274,30 +1308,34 @@
       const name = dbProfile.name || currentUser.email.split('@')[0];
       $('#greet-name').textContent = name.split(' ')[0];
 
-      const tasks = (dbProfile.tasks && dbProfile.tasks.length) ? dbProfile.tasks : defaultTasks();
+      let doneIdx = [];
+      try { doneIdx = JSON.parse(localStorage.getItem(planKey()) || '[]'); } catch (e) {}
+      const tasks = planItems.map((label, i) => ({ label, done: doneIdx.includes(i) }));
       const left = tasks.filter(x => !x.done).length;
-      $('#greet-sub').textContent = left === 0 ? 'All done for today — nice work.' : left + ' tasks left to close out today.';
+      $('#greet-sub').textContent = !tasks.length ? 'Nothing planned for today yet.' : left === 0 ? 'All done for today, nice work.' : left + ' tasks left to close out today.';
 
       const taskListEl = $('#task-list');
       taskListEl.innerHTML = '';
-      tasks.forEach(task => {
+      if (!tasks.length) {
+        const li = document.createElement('li');
+        li.textContent = 'No plan set for today';
+        taskListEl.appendChild(li);
+      }
+      tasks.forEach((task, i) => {
         const li = document.createElement('li');
         li.className = task.done ? 'done' : '';
         const chk = document.createElement('span');
         chk.className = 'chk';
         li.appendChild(chk);
         li.appendChild(document.createTextNode(task.label));
-        
-        li.addEventListener('click', async () => {
-          const updatedTasks = tasks.map(t => t.id === task.id ? { ...t, done: !t.done } : t);
-          if (task.done) task.done = false; else task.done = true;
+        li.addEventListener('click', () => {
+          const next = task.done ? doneIdx.filter(x => x !== i) : [...doneIdx, i];
+          try { localStorage.setItem(planKey(), JSON.stringify(next)); } catch (e) {}
           renderHome();
-          await supabase.from('profiles').update({ tasks: updatedTasks }).eq('id', currentUser.id);
-          dbProfile.tasks = updatedTasks;
         });
         taskListEl.appendChild(li);
       });
-      $('#plan-count').textContent = tasks.filter(x => x.done).length + ' of ' + tasks.length + ' done';
+      $('#plan-count').textContent = tasks.length ? tasks.filter(x => x.done).length + ' of ' + tasks.length + ' done' : 'Nothing planned';
 
       const streak = dbProfile.streak_count || 0;
       countUp($('#streak-num'), streak, 700);
@@ -1340,8 +1378,8 @@
       applyFilter();
     }
 
-    const noteKey = () => 'stride_read_' + (dailyNote && dailyNote.id);
-    function noteRead() { try { return localStorage.getItem(noteKey()) === '1'; } catch (e) { return false; } }
+    const readKey = id => 'stride_read_' + id;
+    function noteRead(id) { try { return !!localStorage.getItem(readKey(id)); } catch (e) { return false; } }
     let scrollTimer = null;
     function stopAutoScroll() { clearInterval(scrollTimer); scrollTimer = null; }
     window.toggleAutoScroll = () => {
@@ -1350,24 +1388,21 @@
       else { scrollTimer = setInterval(() => window.scrollBy(0, 1), 30); if (b) b.innerHTML = '<i data-lucide="pause"></i> Pause'; }
       icons();
     };
-    window.doneReading = () => {
-      try { localStorage.setItem(noteKey(), '1'); } catch (e) {}
-      stopAutoScroll(); renderNotesPage(); renderReadToday(); toast('Nice! Questions unlocked.');
+    window.doneReading = id => {
+      try { localStorage.setItem(readKey(id), new Date().toISOString()); } catch (e) {}
+      stopAutoScroll(); renderNotesPage(); renderReadToday(); renderHome(); toast('Nice! Questions unlocked.');
     };
     function renderReadToday() {
       const el = $('#read-today'); if (!el) return;
-      if (!dailyNote) {
-        el.innerHTML = '<div class="panel" style="text-align:center;padding:20px;border-style:dashed"><p style="color:var(--muted);font-size:.9rem">Nothing here today.<br>Practice questions for now.</p></div>';
+      if (!dailyNotes.length) {
+        el.innerHTML = '<div class="panel" style="text-align:center;padding:20px;border-style:dashed"><p style="color:var(--muted);font-size:.9rem">No notes here.<br>Practice now.</p><button class="start-btn" id="rt-prac" style="margin:12px 0 0">Practice now</button></div>';
+        $('#rt-prac').onclick = () => goTo('practice');
         return;
       }
-      const hasTest = dailyNote.short_test_count > 0;
-      el.innerHTML = `<div class="panel"><p class="eyebrow">Read for today</p><h3>${escH(dailyNote.title)}</h3>
-        <div style="display:flex;gap:8px;margin-top:12px">
-          <button class="start-btn" id="rt-read" style="margin:0;flex:1">Read</button>
-          ${hasTest ? `<button class="start-btn" id="rt-test" style="margin:0;flex:1" ${noteRead() ? '' : 'disabled'}>Short test</button>` : ''}
-        </div>${hasTest && !noteRead() ? '<p style="font-size:.75rem;color:var(--muted);margin-top:8px">Finish reading to unlock the test.</p>' : ''}</div>`;
+      const unread = dailyNotes.filter(n => !noteRead(n.id)).length;
+      const more = dailyNotes.length > 1 ? 'and ' + (dailyNotes.length - 1) + ' more' : '';
+      el.innerHTML = `<div class="panel"><p class="eyebrow">Read for today</p><h3>${escH(dailyNotes[0].title)}</h3><p style="font-size:.8rem;color:var(--muted);margin-top:4px">${more}${more && !unread ? ', ' : ''}${unread ? '' : 'all read'}</p><button class="start-btn" id="rt-read" style="margin:12px 0 0">Open notes</button></div>`;
       $('#rt-read').onclick = () => goTo('notes');
-      if (hasTest) $('#rt-test').onclick = () => noteRead() && startNoteTest();
     }
     let lbAt = 0, lbData = null;
     async function renderLeaderboard() {
@@ -1388,49 +1423,72 @@
       if (btn) btn.classList.toggle('dot', announcements.some(a => !seen.includes(a.id)));
     }
     function renderAnnouncePage() {
-      markAnnSeen();
+      const seen = seenAnn();
       const root = $('#announce-content');
-      root.innerHTML = announcements.length ? announcements.map(a => `<div class="panel" style="padding:16px;margin-bottom:0"><h3 style="font-size:1.05rem;margin-bottom:6px">${escH(a.title)}</h3><p style="font-size:.88rem;color:#e9e9e9;line-height:1.5">${escH(a.body)}</p><p style="font-size:.7rem;color:var(--muted);margin-top:8px">${new Date(a.created_at).toLocaleDateString()}</p></div>`).join('') : '<p class="empty">No announcements yet.</p>';
+      const when = d => { const days = Math.floor((Date.now() - new Date(d)) / 864e5); return days < 1 ? 'Today' : days === 1 ? 'Yesterday' : new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }); };
+      root.innerHTML = announcements.length ? announcements.map(a => `
+        <div class="panel ann${seen.includes(a.id) ? '' : ' unseen'}">
+          <div class="ann-top">
+            <span class="ann-ico"><i data-lucide="megaphone"></i></span>
+            <div class="ann-meta"><h3>${escH(a.title)}</h3><small>${when(a.created_at)}</small></div>
+            ${seen.includes(a.id) ? '' : '<span class="ann-tag">New</span>'}
+          </div>
+          <p class="ann-body">${escH(a.body)}</p>
+        </div>`).join('') : '<p class="empty">No announcements yet.</p>';
+      icons();
+      markAnnSeen();
     }
 
+    let openNoteId = null;
+    window.openNote = id => { openNoteId = id; stopAutoScroll(); renderNotesPage(); window.scrollTo({ top: 0, behavior: 'auto' }); };
+    window.closeNote = () => { openNoteId = null; stopAutoScroll(); renderNotesPage(); };
     function renderNotesPage() {
       const root = $('#notes-content');
-      if (dailyNote) {
-        let mathHtml = marked.parse(dailyNote.content);
-        root.innerHTML = `
-          <div class="note-container">
-            <div class="note-header">
-              ${dailyNote.subject ? `<span class="note-subject">${escH(dailyNote.subject)}</span>` : ''}
-              <h2 style="margin-top:8px">${escH(dailyNote.title)}</h2>
-            </div>
-            <button class="start-btn" id="scroll-btn" style="margin:0 0 16px" onclick="toggleAutoScroll()"><i data-lucide="play"></i> Auto-scroll</button>
-            <div class="markdown-body">${mathHtml}</div>
-            ${noteRead()
-              ? (dailyNote.short_test_count > 0 ? `<button class="start-btn" style="margin-top:20px; margin-bottom:0" onclick="startNoteTest()"><i data-lucide="play"></i> Take Short Test (${dailyNote.short_test_count} Qs)</button>` : '')
-              : `<button class="start-btn" style="margin-top:20px; margin-bottom:0" onclick="doneReading()"><i data-lucide="check"></i> Done reading</button>`}
-          </div>
-        `;
-        renderMathInElement($('.markdown-body', root), { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] });
-        icons();
-      } else {
-        root.innerHTML = `
-          <div class="empty" style="margin-top:40px">
-            <i data-lucide="book" style="width:48px;height:48px;margin:0 auto 16px;color:var(--muted);opacity:.5"></i>
-            <p>No note for today.<br>Practice questions for now.</p>
-          </div>
-        `;
-        icons();
+      if (!dailyNotes.length) {
+        root.innerHTML = `<div class="empty" style="margin-top:40px"><i data-lucide="book" style="width:48px;height:48px;margin:0 auto 16px;color:var(--muted);opacity:.5"></i><p>No notes here.<br>Practice now.</p></div>`;
+        icons(); return;
       }
+      const n = dailyNotes.find(x => String(x.id) === String(openNoteId));
+      if (!n) {
+        root.innerHTML = '<div class="stack" style="padding-bottom:130px">' + dailyNotes.map(x => `
+          <div class="panel ann" style="cursor:pointer" onclick="openNote('${x.id}')">
+            <div class="ann-top" style="margin-bottom:0">
+              <span class="ann-ico"><i data-lucide="book-open"></i></span>
+              <div class="ann-meta"><h3>${escH(x.title)}</h3><small>${escH(x.subject || 'General')} &middot; ${x.short_test_count > 0 ? x.short_test_count + ' questions' : 'No questions'}</small></div>
+              ${noteRead(x.id) ? '<span class="ann-tag">Read</span>' : ''}
+            </div>
+          </div>`).join('') + '</div>';
+        icons(); return;
+      }
+      const qCount = n.short_test_count > 0 ? n.short_test_count : 0;
+      const html = DOMPurify.sanitize(marked.parse(n.content || ''));
+      root.innerHTML = `
+        <div class="note-container" style="padding-bottom:130px">
+          <button class="start-btn" style="margin:0 0 14px" onclick="closeNote()"><i data-lucide="arrow-left"></i> All notes</button>
+          <div class="note-header">
+            ${n.subject ? `<span class="note-subject">${escH(n.subject)}</span>` : ''}
+            <h2 style="margin-top:8px">${escH(n.title)}</h2>
+          </div>
+          <button class="start-btn" id="scroll-btn" style="margin:0 0 16px" onclick="toggleAutoScroll()"><i data-lucide="play"></i> Auto-scroll</button>
+          <div class="markdown-body">${html}</div>
+          ${noteRead(n.id)
+            ? (qCount > 0 ? `<button class="start-btn" style="margin-top:20px; margin-bottom:0" onclick="startNoteTest('${n.id}')"><i data-lucide="play"></i> Take Short Test (${qCount} Qs)</button>` : '<p class="empty" style="margin-top:20px">No questions for this note.</p>')
+            : `<button class="start-btn" style="margin-top:20px; margin-bottom:0" onclick="doneReading('${n.id}')"><i data-lucide="check"></i> Done reading</button>`}
+        </div>`;
+      renderMathInElement($('.markdown-body', root), { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] });
+      icons();
     }
 
-    window.startNoteTest = () => {
-      if (!dailyNote) return;
-      const custom = Array.isArray(dailyNote.questions) && dailyNote.questions.length ? dailyNote.questions : null;
+    window.startNoteTest = id => {
+      const n = dailyNotes.find(x => String(x.id) === String(id));
+      if (!n) return;
+      const custom = Array.isArray(n.questions) && n.questions.length ? n.questions : null;
       startTest({
         custom,
-        subjects: dailyNote.subject ? [dailyNote.subject] : (custom ? ['Daily note'] : practice.selected),
+        noteId: custom ? n.id : null,
+        subjects: n.subject ? [n.subject] : (custom ? ['Daily note'] : practice.selected),
         year: 'all',
-        count: dailyNote.short_test_count,
+        count: n.short_test_count,
         difficulty: 'medium',
         mode: 'practice',
         time: 0
@@ -1790,7 +1848,7 @@
       $('#p-streak').textContent = dbProfile.streak_count || 0;
       $('#p-score').textContent = a.overall + '%';
       
-      $('#channel-btn').href = 'https://whatsapp.com/channel/REPLACE_WITH_YOUR_CHANNEL_LINK';
+      $('#channel-btn').addEventListener('click', e => { if (!channelLink) { e.preventDefault(); toast('Channel link not set yet'); } });
     }
 
     $('#admin-btn').addEventListener('click', () => location.href = 'admin.html');

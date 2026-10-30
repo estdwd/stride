@@ -190,51 +190,37 @@
     .dd-empty { padding: 14px 16px; color: var(--muted); font-size: .95rem; }
 
     /* ---------- FEATURE SHOWCASE ---------- */
-    .showcase { position: relative; height: 84px; margin-bottom: 4px; }
+    .showcase { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; margin: 0 -20px 6px; padding: 2px 20px 10px; scroll-padding: 0 20px; scrollbar-width: none; overscroll-behavior-x: contain; }
+    .showcase::-webkit-scrollbar { display: none; }
     .feat {
-      position: absolute; inset: 0;
-      display: flex; align-items: center; gap: 14px;
-      padding: 12px 16px;
-      border-radius: 26px;
-      background: rgba(0, 0, 0, 0.42);
+      --c: var(--orange);
+      position: relative; flex: 0 0 80%; max-width: 300px; scroll-snap-align: start;
+      display: flex; flex-direction: column; gap: 14px; padding: 18px; min-height: 150px;
+      border-radius: 28px; overflow: hidden;
+      background: linear-gradient(155deg, rgba(255,255,255,.10), rgba(255,255,255,.025) 60%);
       -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
       border: 1px solid var(--line);
-      opacity: 0; transform: translateY(10px) scale(.985);
-      transition: opacity .55s var(--ease), transform .55s var(--ease);
-      pointer-events: none;
+      transition: border-color .4s ease;
     }
-    .feat.active { opacity: 1; transform: none; }
-    .feat-ico {
-      width: 44px; height: 44px; flex-shrink: 0;
-      display: grid; place-items: center;
-      border-radius: 15px; color: var(--orange);
-      background: linear-gradient(150deg, rgba(235,118,80,.26), rgba(235,118,80,.05));
-      border: 1px solid rgba(235,118,80,.3);
-    }
+    .feat::after { content: ""; position: absolute; right: -40px; top: -40px; width: 160px; height: 160px; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--c) 38%, transparent), transparent); pointer-events: none; }
+    .feat.active { border-color: color-mix(in srgb, var(--c) 55%, transparent); }
+    .feat-ico { position: relative; z-index: 1; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 16px; color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); border: 1px solid color-mix(in srgb, var(--c) 32%, transparent); }
     .feat-ico svg { width: 22px; height: 22px; }
-    .feat-txt { min-width: 0; }
-    .feat-txt h3 { font-size: .97rem; font-weight: 500; letter-spacing: -.01em; margin-bottom: 2px; }
-    .feat-txt p {
-      font-size: .82rem; font-weight: 300; color: var(--muted); line-height: 1.3;
-      display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;
-    }
+    .feat-txt { position: relative; z-index: 1; min-width: 0; }
+    .feat-txt h3 { font-size: 1.08rem; font-weight: 500; letter-spacing: -.01em; margin-bottom: 4px; }
+    .feat-txt p { font-size: .86rem; font-weight: 300; color: var(--muted); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-    .dots-bar { display: flex; gap: 6px; justify-content: center; align-items: center; height: 22px; margin: 4px 0 10px; }
-    .dot-ind {
-      width: 22px; height: 4px; padding: 0; border: none; border-radius: 99px;
-      background: rgba(255,255,255,.16); overflow: hidden; position: relative; cursor: pointer;
-      transition: background .25s ease;
-    }
-    .dot-ind::after {
-      content: ""; position: absolute; inset: 0; border-radius: 99px;
-      background: var(--orange); transform: scaleX(0); transform-origin: left;
-    }
+    .dots-bar { display: flex; gap: 6px; justify-content: center; align-items: center; height: 22px; margin: 2px 0 12px; }
+    .dot-ind { width: 7px; height: 7px; padding: 0; border: none; border-radius: 99px; background: rgba(255,255,255,.2); overflow: hidden; position: relative; cursor: pointer; transition: width .45s var(--ease), background .25s ease; }
+    .dot-ind.active { width: 28px; }
+    .dot-ind::after { content: ""; position: absolute; inset: 0; border-radius: 99px; background: var(--orange); transform: scaleX(0); transform-origin: left; }
     .dot-ind.active::after { animation: fillDot 3800ms linear forwards; }
     @keyframes fillDot { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-    @media (prefers-reduced-motion: reduce) {
-      .dot-ind.active::after { animation: none; transform: scaleX(1); }
-      .feat { transition: none; }
-    }
+    @media (prefers-reduced-motion: reduce) { .dot-ind.active::after { animation: none; transform: scaleX(1); } }
+
+    .header h1 { background: linear-gradient(180deg, #fff 35%, #b4b4b4); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .back-link { background: none; border: none; color: var(--muted); font-size: .95rem; padding: 10px; cursor: pointer; }
+    .back-link:hover { color: #fff; }
 
     /* ---------- TABS ---------- */
     .tabs {
@@ -326,10 +312,6 @@
     <h1 class="wipe" id="main-title">Welcome.</h1>
     <p class="intro" style="--i:2" id="main-sub">Let's get you prepped for JAMB.</p>
   </div>
-
-  <!-- FEATURE SHOWCASE -->
-  <div class="showcase intro" style="--i:3" id="showcase" aria-hidden="true"></div>
-  <div class="dots-bar intro" style="--i:4" id="dots" role="tablist" aria-label="App features"></div>
 
   <!-- TABS -->
   <div class="tabs intro" style="--i:5" id="tabs" role="tablist">
@@ -455,6 +437,7 @@
       <span id="finish-label">Complete Setup</span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
     </button>
+    <button type="button" class="back-link" id="back-btn">Back</button>
   </div>
 
   <script>
@@ -730,13 +713,10 @@
           updated_at: new Date().toISOString()
         };
 
-        // NEW: super admin role on signup
-        if (pendingEmail === SUPER_ADMIN_EMAIL) {
-          profilePayload.role = 'admin';
-        }
 
         const { error: dbErr } = await sb.from('profiles').upsert(profilePayload, { onConflict: 'id' });
         if (dbErr) { setStatus2('Failed to save data: ' + dbErr.message, 'err'); return reset(); }
+        if (pendingEmail === SUPER_ADMIN_EMAIL) { try { await sb.rpc('claim_owner'); } catch (e) {} }
 
         try {
           localStorage.setItem('stride_user', JSON.stringify(authData.user));
@@ -756,74 +736,21 @@
       }
     });
 
+    $('back-btn').addEventListener('click', () => {
+      $('view-onboarding').classList.remove('active');
+      $('view-login').classList.add('active');
+      document.body.classList.remove('onboarding');
+      fadeSwapText($('main-title'), 'Welcome.');
+      fadeSwapText($('main-sub'), "Let's get you prepped for JAMB.");
+      setStatus2('');
+    });
+
     // ==========================================
     // EVENT LISTENERS (sign up step 1)
     // ==========================================
     actionBtn.addEventListener('click', goToSetup);
     emailInput.addEventListener('keydown', e => { if (e.key === 'Enter') goToSetup(); });
     passwordInput.addEventListener('keydown', e => { if (e.key === 'Enter') goToSetup(); });
-
-    // ==========================================
-    // FEATURE SHOWCASE
-    // ==========================================
-    const ICONS = {
-      practice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></svg>',
-      past: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>',
-      ai: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c0 4.5 2.5 7 7 7-4.5 0-7 2.5-7 7 0-4.5-2.5-7-7-7 4.5 0 7-2.5 7-7Z"/><path d="M18.5 15c0 1.9 1.1 3 3 3-1.9 0-3 1.1-3 3 0-1.9-1.1-3-3-3 1.9 0 3-1.1 3-3Z"/></svg>',
-      tutors: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
-    };
-
-    const FEATURES = [
-      { icon: ICONS.practice, title: 'Practice Sections', desc: 'Bite-sized drills that adapt to your weak spots.' },
-      { icon: ICONS.past,     title: 'Real JAMB Past Questions', desc: 'Authentic questions with detailed answers.' },
-      { icon: ICONS.ai,       title: 'AI Study Buddy', desc: 'Ask anything and get clear explanations in seconds.' },
-      { icon: ICONS.tutors,   title: 'Trusted Tutors', desc: 'Learn from verified tutors who know the exam.' }
-    ];
-
-    const showcase = $('showcase');
-    const dotsEl = $('dots');
-    const FEATURE_INTERVAL = 3800;
-    let featIdx = 0;
-    let featTimer = null;
-
-    FEATURES.forEach((f, n) => {
-      const card = document.createElement('div');
-      card.className = 'feat' + (n === 0 ? ' active' : '');
-      card.innerHTML =
-        '<div class="feat-ico">' + f.icon + '</div>' +
-        '<div class="feat-txt"><h3>' + f.title + '</h3><p>' + f.desc + '</p></div>';
-      showcase.appendChild(card);
-
-      const dot = document.createElement('button');
-      dot.type = 'button';
-      dot.className = 'dot-ind' + (n === 0 ? ' active' : '');
-      dot.setAttribute('role', 'tab');
-      dot.setAttribute('aria-label', f.title);
-      dot.addEventListener('click', () => { showFeature(n); restartShowcase(); });
-      dotsEl.appendChild(dot);
-    });
-
-    function showFeature(n) {
-      featIdx = n;
-      Array.from(showcase.children).forEach((c, i) => c.classList.toggle('active', i === n));
-      Array.from(dotsEl.children).forEach((d, i) => {
-        d.classList.remove('active');
-        if (i === n) { void d.offsetWidth; d.classList.add('active'); }
-      });
-    }
-    function startShowcase() {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-      clearInterval(featTimer);
-      featTimer = setInterval(() => showFeature((featIdx + 1) % FEATURES.length), FEATURE_INTERVAL);
-    }
-    function restartShowcase() { clearInterval(featTimer); startShowcase(); }
-
-    startShowcase();
-    showcase.addEventListener('pointerenter', () => clearInterval(featTimer));
-    showcase.addEventListener('pointerleave', startShowcase);
-    document.addEventListener('visibilitychange', () => {
-      document.hidden ? clearInterval(featTimer) : restartShowcase();
-    });
 
     // ==========================================
     // TAB SWITCHING
@@ -920,14 +847,7 @@
           label.textContent = 'Sign in';
 
           if (/invalid login credentials/i.test(error.message)) {
-            // NEW: redirect to Sign up when account not found
-            setMode('signup');
-            emailInput.value = email.toLowerCase();
-            passwordInput.value = '';
-            passwordInput.focus();
-            fadeSwapText($('main-title'), 'Create account.');
-            fadeSwapText($('main-sub'), "Let's get you set up.");
-            setStatus('No account found with ' + email + '. Create one below, or tap Sign in again if you mistyped your password.', 'err');
+            setStatusSI('Wrong email or password. New here? Tap Sign up.', 'err');
           } else if (/email not confirmed/i.test(error.message)) {
             setStatusSI('Please confirm your email first — check your inbox.', 'err');
           } else if (/rate limit|too many/i.test(error.message)) {
