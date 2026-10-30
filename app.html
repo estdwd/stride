@@ -453,6 +453,8 @@
       .ring { width: 96px; height: 96px; }
       .ring-meta .big { font-size: 2.3rem; }
     }
+      .nav-item { position: relative; }
+    .nav-item.dot::before { content: ''; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--orange); }
   </style>
 </head>
 <body>
@@ -551,11 +553,8 @@
 
       <p class="empty" id="empty" hidden>Nothing here yet.<br/>Tap the heart on a card to save it.</p>
       
-      <!-- REVERTED TO ORIGINAL TIP OF THE DAY -->
-      <div class="panel stagger" style="--i:7; margin-top:16px; background:transparent; border:1px dashed rgba(255,255,255,0.15); text-align:center; padding:20px;">
-        <p style="font-size:.85rem; color:var(--muted);">"Small daily improvements are the key to staggering long-term results."</p>
-        <p style="font-size:.7rem; color:#444; margin-top:8px; text-transform:uppercase; letter-spacing:.05em;">Stride Tip of the Day</p>
-      </div>
+      <div id="read-today" class="stagger" style="--i:7; margin-top:16px"></div>
+      <div id="leaderboard"></div>
     </section>
 
     <!-- NEW NOTES PAGE -->
@@ -567,6 +566,11 @@
       <div id="notes-content" class="stagger" style="--i:0">
         <!-- Rendered dynamically -->
       </div>
+    </section>
+
+    <section id="announce" class="page">
+      <header class="top-header"><h1>Announcements</h1></header>
+      <div id="announce-content" class="stack"></div>
     </section>
 
     <section id="practice" class="page">
@@ -761,8 +765,9 @@
     <div class="dock-inner">
       <button class="nav-item active" data-target="home" aria-label="Home"><i data-lucide="home"></i></button>
       <button class="nav-item" data-target="practice" aria-label="Practice"><i data-lucide="grid"></i></button>
-      <button class="fab" id="fab" aria-label="Start practice"><i data-lucide="plus"></i></button>
       <button class="nav-item" data-target="notes" aria-label="Notes"><i data-lucide="book-open"></i></button>
+      <button class="fab" id="fab" aria-label="Start practice"><i data-lucide="plus"></i></button>
+      <button class="nav-item" data-target="announce" aria-label="News"><i data-lucide="megaphone"></i></button>
       <button class="nav-item" data-target="stats" aria-label="Stats"><i data-lucide="bar-chart-2"></i></button>
       <button class="nav-item" data-target="profile" aria-label="Profile"><i data-lucide="user"></i></button>
     </div>
@@ -794,9 +799,16 @@
     let dbProfile = {};
     let dbTests = [];
     let availableSubjects = [];
+    let questionMeta = [];
     let dailyNote = null;
     let challenges = [];
     let myChallenges = [];
+    function chProg(c) {
+      const start = new Date(); start.setHours(0,0,0,0);
+      if (c.type === 'weekly') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+      const done = new Set((dbTests || []).filter(t => new Date(t.date) >= start).map(t => String(t.date).slice(0, 19)));
+      return Math.min(done.size, c.target);
+    }
     let announcements = [];
 
     let access = { has_access: true };
@@ -1060,8 +1072,9 @@
     }
 
     async function fetchMeta() {
-      const { data } = await supabase.from('questions').select('subject, year, section');
+      const { data } = await supabase.rpc('question_meta');
       if (data) {
+        questionMeta = data;
         availableSubjects = [...new Set(data.map(q => q.subject).filter(Boolean))];
       }
     }
@@ -1070,10 +1083,16 @@
       // Fetch active note
       const { data: notes } = await supabase.from('daily_notes').select('*').eq('active', true).order('created_at', { ascending: false }).limit(1);
       if (notes && notes.length > 0) dailyNote = notes[0];
+      if (dailyNote && Array.isArray(dailyNote.questions) && dailyNote.questions.length) dailyNote.short_test_count = dailyNote.questions.length;
 
       // Fetch challenges
       const { data: chs } = await supabase.from('challenges').select('*').eq('active', true);
       challenges = chs || [];
+      const dailies = challenges.filter(c => c.type === 'daily');
+      if (dailies.length > 1) {
+        const pick = dailies[Math.floor(Date.now() / 864e5) % dailies.length];
+        challenges = challenges.filter(c => c.type !== 'daily' || c === pick);
+      }
 
       // Fetch user challenge progress
       if (challenges.length > 0) {
@@ -1226,7 +1245,9 @@
       window.scrollTo({ top: 0, behavior: 'auto' });
       animatePage(document.getElementById(id));
       if (id === 'stats') runAnalyticsAnimations();
+      stopAutoScroll();
       if (id === 'notes') renderNotesPage();
+      if (id === 'announce') renderAnnouncePage();
     }
 
     navBtns.forEach(b => b.addEventListener('click', () => goTo(b.dataset.target)));
@@ -1246,6 +1267,7 @@
     }
 
     function renderHome() {
+      renderReadToday(); renderLeaderboard();
       const h = new Date().getHours();
       $('#greet-hi').textContent = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
       
@@ -1294,8 +1316,7 @@
       if (challenges.length > 0) {
         const weekly = challenges.find(c => c.type === 'weekly');
         if (weekly) {
-          let uc = myChallenges.find(u => u.challenge_id === weekly.id);
-          let prog = uc ? uc.progress : 0;
+          let prog = chProg(weekly);
           let pctDone = Math.min(100, Math.round((prog / weekly.target) * 100));
           $('#challenge-count').textContent = `${prog} of ${weekly.target} done`;
           $('#challenge-bar').style.width = pctDone + '%';
@@ -1319,6 +1340,59 @@
       applyFilter();
     }
 
+    const noteKey = () => 'stride_read_' + (dailyNote && dailyNote.id);
+    function noteRead() { try { return localStorage.getItem(noteKey()) === '1'; } catch (e) { return false; } }
+    let scrollTimer = null;
+    function stopAutoScroll() { clearInterval(scrollTimer); scrollTimer = null; }
+    window.toggleAutoScroll = () => {
+      const b = $('#scroll-btn');
+      if (scrollTimer) { stopAutoScroll(); if (b) b.innerHTML = '<i data-lucide="play"></i> Auto-scroll'; }
+      else { scrollTimer = setInterval(() => window.scrollBy(0, 1), 30); if (b) b.innerHTML = '<i data-lucide="pause"></i> Pause'; }
+      icons();
+    };
+    window.doneReading = () => {
+      try { localStorage.setItem(noteKey(), '1'); } catch (e) {}
+      stopAutoScroll(); renderNotesPage(); renderReadToday(); toast('Nice! Questions unlocked.');
+    };
+    function renderReadToday() {
+      const el = $('#read-today'); if (!el) return;
+      if (!dailyNote) {
+        el.innerHTML = '<div class="panel" style="text-align:center;padding:20px;border-style:dashed"><p style="color:var(--muted);font-size:.9rem">Nothing here today.<br>Practice questions for now.</p></div>';
+        return;
+      }
+      const hasTest = dailyNote.short_test_count > 0;
+      el.innerHTML = `<div class="panel"><p class="eyebrow">Read for today</p><h3>${escH(dailyNote.title)}</h3>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="start-btn" id="rt-read" style="margin:0;flex:1">Read</button>
+          ${hasTest ? `<button class="start-btn" id="rt-test" style="margin:0;flex:1" ${noteRead() ? '' : 'disabled'}>Short test</button>` : ''}
+        </div>${hasTest && !noteRead() ? '<p style="font-size:.75rem;color:var(--muted);margin-top:8px">Finish reading to unlock the test.</p>' : ''}</div>`;
+      $('#rt-read').onclick = () => goTo('notes');
+      if (hasTest) $('#rt-test').onclick = () => noteRead() && startNoteTest();
+    }
+    let lbAt = 0, lbData = null;
+    async function renderLeaderboard() {
+      const el = $('#leaderboard'); if (!el) return;
+      if (!lbData || Date.now() - lbAt > 60000) {
+        const { data } = await supabase.rpc('leaderboard');
+        lbData = data || []; lbAt = Date.now();
+      }
+      if (!lbData.length) { el.innerHTML = ''; return; }
+      el.innerHTML = '<div class="panel" style="margin-top:16px"><div class="panel-head"><h3>Leaderboard</h3><small>Last 7 days</small></div>' +
+        lbData.map((r, i) => `<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(255,255,255,.06);${r.id === currentUser.id ? 'color:var(--orange);' : ''}"><span>${i + 1}. ${escH(r.name || 'Student')}</span><span>${r.score} pts</span></div>`).join('') + '</div>';
+    }
+    const seenAnn = () => { try { return JSON.parse(localStorage.getItem('stride_seen_ann') || '[]'); } catch (e) { return []; } };
+    function markAnnSeen() { try { localStorage.setItem('stride_seen_ann', JSON.stringify(announcements.map(a => a.id))); } catch (e) {} updateAnnDot(); }
+    function updateAnnDot() {
+      const seen = seenAnn();
+      const btn = document.querySelector('.nav-item[data-target="announce"]');
+      if (btn) btn.classList.toggle('dot', announcements.some(a => !seen.includes(a.id)));
+    }
+    function renderAnnouncePage() {
+      markAnnSeen();
+      const root = $('#announce-content');
+      root.innerHTML = announcements.length ? announcements.map(a => `<div class="panel" style="padding:16px;margin-bottom:0"><h3 style="font-size:1.05rem;margin-bottom:6px">${escH(a.title)}</h3><p style="font-size:.88rem;color:#e9e9e9;line-height:1.5">${escH(a.body)}</p><p style="font-size:.7rem;color:var(--muted);margin-top:8px">${new Date(a.created_at).toLocaleDateString()}</p></div>`).join('') : '<p class="empty">No announcements yet.</p>';
+    }
+
     function renderNotesPage() {
       const root = $('#notes-content');
       if (dailyNote) {
@@ -1329,12 +1403,11 @@
               ${dailyNote.subject ? `<span class="note-subject">${escH(dailyNote.subject)}</span>` : ''}
               <h2 style="margin-top:8px">${escH(dailyNote.title)}</h2>
             </div>
+            <button class="start-btn" id="scroll-btn" style="margin:0 0 16px" onclick="toggleAutoScroll()"><i data-lucide="play"></i> Auto-scroll</button>
             <div class="markdown-body">${mathHtml}</div>
-            ${dailyNote.short_test_count > 0 ? `
-              <button class="start-btn" style="margin-top:20px; margin-bottom:0" onclick="startNoteTest()">
-                <i data-lucide="play"></i> Take Short Test (${dailyNote.short_test_count} Qs)
-              </button>
-            ` : ''}
+            ${noteRead()
+              ? (dailyNote.short_test_count > 0 ? `<button class="start-btn" style="margin-top:20px; margin-bottom:0" onclick="startNoteTest()"><i data-lucide="play"></i> Take Short Test (${dailyNote.short_test_count} Qs)</button>` : '')
+              : `<button class="start-btn" style="margin-top:20px; margin-bottom:0" onclick="doneReading()"><i data-lucide="check"></i> Done reading</button>`}
           </div>
         `;
         renderMathInElement($('.markdown-body', root), { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}] });
@@ -1352,8 +1425,10 @@
 
     window.startNoteTest = () => {
       if (!dailyNote) return;
+      const custom = Array.isArray(dailyNote.questions) && dailyNote.questions.length ? dailyNote.questions : null;
       startTest({
-        subjects: dailyNote.subject ? [dailyNote.subject] : practice.selected,
+        custom,
+        subjects: dailyNote.subject ? [dailyNote.subject] : (custom ? ['Daily note'] : practice.selected),
         year: 'all',
         count: dailyNote.short_test_count,
         difficulty: 'medium',
@@ -1405,14 +1480,13 @@
       if (!challenges.length) return toast('No active challenges right now.');
       let html = '<div class="stack">';
       challenges.forEach(c => {
-        let uc = myChallenges.find(u => u.challenge_id === c.id);
-        let prog = uc ? uc.progress : 0;
+        let prog = chProg(c);
         let pctDone = Math.min(100, Math.round((prog / c.target) * 100));
         html += `
           <div class="panel" style="margin-bottom:0; padding:16px;">
             <div class="panel-head" style="margin-bottom:6px">
               <h3 style="font-size:1rem; margin:0">${escH(c.title)}</h3>
-              <span class="tag ${uc?.completed ? 't-new' : 't-prem'}">${uc?.completed ? 'Done' : c.type}</span>
+              <span class="tag ${prog >= c.target ? 't-new' : 't-prem'}">${prog >= c.target ? 'Done' : c.type}</span>
             </div>
             <p style="font-size:.85rem; color:var(--muted); margin-bottom:12px">${escH(c.description || '')}</p>
             <div class="area-bar"><div style="width:${pctDone}%"></div></div>
@@ -1447,6 +1521,18 @@
         openModal({ title: 'Announcements', body: html, actions: [{ label: 'Got it', style: 'primary' }] });
       });
     }
+
+    updateAnnDot();
+    setTimeout(() => {
+      const seen = seenAnn();
+      const alerts = announcements.filter(a => a.notify && !seen.includes(a.id));
+      if (alerts.length) {
+        const a0 = alerts[0];
+        openModal({ title: a0.title, body: `<p style="line-height:1.5">${escH(a0.body)}</p>`, actions: [{ label: 'Got it', style: 'primary' }] });
+        try { localStorage.setItem('stride_seen_ann', JSON.stringify([...new Set([...seen, ...alerts.map(x => x.id)])])); } catch (e) {}
+        updateAnnDot();
+      }
+    }, 3300);
 
     const SUBJECT_MAP = {
       sciences: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Biology', 'Agricultural Science'],
@@ -1492,12 +1578,8 @@
       const currentYearVal = yearSel.value || 'all';
       
       const updateYearSelect = async () => {
-        let q = supabase.from('questions').select('year').not('year', 'is', null);
-        if (practice.selected.length > 0) {
-          q = q.in('subject', practice.selected);
-        }
-        const { data } = await q;
-        let years = [...new Set((data || []).map(d => d.year))].sort((a,b) => b-a);
+        const rows = questionMeta.filter(r => r.year != null && (practice.selected.length === 0 || practice.selected.includes(r.subject)));
+        let years = [...new Set(rows.map(d => d.year))].sort((a,b) => b-a);
         
         yearSel.innerHTML = '<option value="all">All Years</option>';
         years.forEach(y => {

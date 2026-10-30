@@ -326,6 +326,18 @@
       .glow { animation: none; }
     }
     @media (max-width: 360px) { .sc .big { font-size: 3rem; } .tags { max-width: 40%; } }
+  
+    .ddw { position: relative; }
+    .ddw .dd-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-radius: 999px; background: rgba(0,0,0,0.42); border: 1px solid var(--line); font-size: .92rem; cursor: pointer; user-select: none; }
+    .ddw.open .dd-btn { border-color: #fff; }
+    .ddw .select-icon { width: 16px; height: 16px; color: var(--muted); transition: transform .25s; }
+    .ddw.open .select-icon { transform: rotate(180deg); }
+    .ddw .dd-panel { position: absolute; left: 0; right: 0; top: calc(100% + 8px); background: rgba(14,14,16,0.98); border: 1px solid var(--line); border-radius: 20px; box-shadow: 0 18px 50px rgba(0,0,0,.6); display: none; overflow: hidden; z-index: 90; }
+    .ddw.open .dd-panel { display: block; }
+    .ddw .dd-list { max-height: 220px; overflow-y: auto; padding: 6px; }
+    .ddw .dd-opt { padding: 12px 16px; border-radius: 12px; font-size: .95rem; cursor: pointer; }
+    .ddw .dd-opt:hover { background: rgba(255,255,255,0.08); }
+    .ddw .dd-opt.sel { background: rgba(235,118,80,0.18); color: var(--orange); }
   </style>
 </head>
 <body>
@@ -420,6 +432,31 @@
         <button data-c="notes" class="on">Notes</button>
         <button data-c="challenges">Challenges</button>
         <button data-c="announce">Announcements</button>
+        <button data-c="console">Console</button>
+      </div>
+
+      <div id="c-console" style="margin-top:14px; display:none">
+        <div class="panel">
+          <h3>Stats Console</h3>
+          <p class="txt">Edit any user's stats (handy for screenshots).</p>
+          <div class="stack">
+            <select class="field" id="cs-user"></select>
+            <div class="two-col"><input class="field" id="cs-streak" type="number" placeholder="Streak" /><input class="field" id="cs-name" type="text" placeholder="Name" /></div>
+            <input class="field" id="cs-course" type="text" placeholder="Course" />
+            <button class="btn" id="cs-save"><i data-lucide="save"></i> Save profile stats</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Test results</h3>
+          <div class="stack">
+            <input class="field" id="cs-subj" type="text" placeholder="Subject (e.g. Physics)" />
+            <div class="two-col"><input class="field" id="cs-score" type="number" placeholder="Score" value="15" /><input class="field" id="cs-total" type="number" placeholder="Out of" value="20" /></div>
+            <div class="two-col"><input class="field" id="cs-days" type="number" placeholder="Days ago" value="0" /><input class="field" id="cs-count" type="number" placeholder="How many" value="1" /></div>
+            <button class="btn" id="cs-add"><i data-lucide="plus"></i> Add results</button>
+            <button class="btn" id="cs-demo"><i data-lucide="sparkles"></i> Fill a demo week</button>
+            <button class="mini del" id="cs-clear">Clear all tests for this user</button>
+          </div>
+        </div>
       </div>
 
       <div id="c-notes" style="margin-top:14px">
@@ -429,6 +466,7 @@
             <input class="field" id="note-title" type="text" placeholder="Title" />
             <input class="field" id="note-subject" type="text" placeholder="Subject (optional)" />
             <textarea class="field" id="note-content" placeholder="Markdown content" style="min-height:120px"></textarea>
+            <textarea class="field" id="note-json" style="min-height:90px;font-family:monospace" placeholder='Short test questions: paste a JSON array (max 10), e.g. [{"question":"2+2?","option_a":"3","option_b":"4","option_c":"5","option_d":"6","answer":"b","explanation":"..."}]'></textarea>
             <div class="two-col">
               <input class="field" id="note-short" type="number" placeholder="Short test Qs (e.g. 5)" value="0" />
               <button class="btn" id="note-save"><i data-lucide="save"></i> Save Note</button>
@@ -470,6 +508,7 @@
           <div class="stack">
             <input class="field" id="ann-title" type="text" placeholder="Title" />
             <textarea class="field" id="ann-body" placeholder="Message"></textarea>
+            <div class="seg two" id="ann-mode"><button data-m="0" class="on">Normal</button><button data-m="1">Alert popup</button></div>
             <button class="btn" id="ann-save"><i data-lucide="megaphone"></i> Publish</button>
           </div>
         </div>
@@ -1125,14 +1164,121 @@
     });
     $$('#q-diff-seg button').forEach(b => b.addEventListener('click', () => { qFilter.difficulty = b.dataset.diff; renderQs(); }));
 
+    /* --- Console + editors --- */
+    function parseQs(txt) {
+      txt = (txt || '').trim(); if (!txt) return null;
+      let a; try { a = JSON.parse(txt); } catch (e) { throw new Error('Questions: invalid JSON'); }
+      if (!Array.isArray(a) || !a.length) throw new Error('Questions must be a JSON array');
+      if (a.length > 10) throw new Error('Max 10 questions');
+      a.forEach((q, i) => {
+        if (!q.question || !q.option_a || !q.option_b || !['a','b','c','d'].includes(String(q.answer).toLowerCase())) throw new Error('Question ' + (i + 1) + ' needs question, option_a, option_b, answer (a-d)');
+        q.answer = String(q.answer).toLowerCase();
+      });
+      return a;
+    }
+    let annNotify = false;
+    $$('#ann-mode button').forEach(b => b.addEventListener('click', () => {
+      annNotify = b.dataset.m === '1';
+      $$('#ann-mode button').forEach(x => x.classList.toggle('on', x === b));
+    }));
+    window.toggleAnnNotify = async (id, cur) => {
+      const { error } = await sb.from('announcements').update({ notify: !cur }).eq('id', id);
+      if (error) return fail(error);
+      loadAnns();
+    };
+    const askConfirm = msg => new Promise(res => {
+      let done = false;
+      openModal({ title: 'Are you sure?', body: `<p class="txt">${esc(msg)}</p>`, actions: [
+        { label: 'Confirm', style: 'primary', onClick: () => { done = true; res(true); } },
+        { label: 'Cancel', style: 'ghost', onClick: () => { done = true; res(false); } }
+      ] });
+      const mo = new MutationObserver(() => { if (modalEl.hidden && !done) { done = true; res(false); mo.disconnect(); } });
+      mo.observe(modalEl, { attributes: true, attributeFilter: ['hidden'] });
+    });
+    function pick(sel) {
+      if (sel._pk) return sel._pk();
+      const w = document.createElement('div'); w.className = 'ddw';
+      sel.parentNode.insertBefore(w, sel); w.appendChild(sel); sel.style.display = 'none';
+      const btn = document.createElement('div'); btn.className = 'dd-btn';
+      btn.innerHTML = '<span></span><svg class="select-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>';
+      const panel = document.createElement('div'); panel.className = 'dd-panel';
+      const list = document.createElement('div'); list.className = 'dd-list'; panel.appendChild(list);
+      w.append(btn, panel);
+      const span = btn.firstElementChild;
+      const label = () => { const o = sel.options[sel.selectedIndex]; const t = o ? o.textContent : ''; if (span.textContent !== t) span.textContent = t; };
+      btn.onclick = e => {
+        e.stopPropagation();
+        $$('.ddw.open').forEach(g => g !== w && g.classList.remove('open'));
+        list.innerHTML = '';
+        Array.from(sel.options).forEach(o => {
+          const d = document.createElement('div'); d.className = 'dd-opt' + (o.value === sel.value ? ' sel' : ''); d.textContent = o.textContent;
+          d.onclick = () => { sel.value = o.value; sel.dispatchEvent(new Event('change')); label(); w.classList.remove('open'); };
+          list.appendChild(d);
+        });
+        w.classList.toggle('open');
+      };
+      document.addEventListener('click', e => { if (!w.contains(e.target)) w.classList.remove('open'); });
+      sel._pk = label; label();
+    }
+    const pickAll = () => $$('select').forEach(pick);
+    new MutationObserver(pickAll).observe(document.body, { childList: true, subtree: true });
+    pickAll();
+    window.editItem = (kind, id) => {
+      const cfg = {
+        note: { table: 'daily_notes', rows: () => allNotes, reload: loadNotes, f: [['title','Title'],['subject','Subject'],['content','Markdown','ta'],['short_test_count','Short test Qs','num'],['questions','Questions JSON (max 10)','json']] },
+        ch:   { table: 'challenges', rows: () => allChallenges, reload: loadChallenges, f: [['title','Title'],['description','Description'],['target','Target','num'],['reward','Reward'],['type','Type (daily or weekly)']] },
+        ann:  { table: 'announcements', rows: () => allAnns, reload: loadAnns, f: [['title','Title'],['body','Body','ta']] }
+      }[kind];
+      const row = cfg.rows().find(r => String(r.id) === String(id));
+      if (!row) return;
+      const root = openModal({
+        title: 'Edit',
+        body: cfg.f.map(([k, l, t]) => `<label class="lbl" style="margin-top:8px">${l}</label>` + (t === 'json'
+          ? `<textarea class="field" data-k="${k}" data-j="1" style="min-height:140px;font-family:monospace">${esc(row[k] ? JSON.stringify(row[k], null, 1) : '')}</textarea>`
+          : t === 'ta'
+          ? `<textarea class="field" data-k="${k}" style="min-height:140px">${esc(row[k] || '')}</textarea>`
+          : `<input class="field" data-k="${k}" type="${t === 'num' ? 'number' : 'text'}" value="${esc(row[k] ?? '')}" />`)).join(''),
+        actions: [
+          { label: 'Save', style: 'primary', onClick: async () => {
+            const p = {};
+            try {
+              $$('[data-k]', root).forEach(el => { p[el.dataset.k] = el.dataset.j ? parseQs(el.value) : el.type === 'number' ? (parseInt(el.value) || 0) : el.value; });
+              if (p.questions) p.short_test_count = p.questions.length;
+            } catch (e) { toast(e.message, true); return false; }
+            const { error } = await sb.from(cfg.table).update(p).eq('id', id);
+            if (error) { toast(error.message, true); return false; }
+            toast('Saved'); cfg.reload();
+          } },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
+    };
+    function syncCs() {
+      const u = users.find(x => x.id === $('#cs-user').value) || users[0];
+      if (!u) return;
+      $('#cs-streak').value = u.streak_count || 0; $('#cs-name').value = u.name || ''; $('#cs-course').value = u.course || '';
+    }
+    function fillConsole() {
+      const sel = $('#cs-user');
+      if (sel.options.length !== users.length) sel.innerHTML = users.map(u => `<option value="${u.id}">${esc(dname(u))} - ${esc(u.email || '')}</option>`).join('');
+      syncCs();
+    }
+    $('#cs-user').addEventListener('change', syncCs);
+    const csRun = async (name, args, msg) => { try { await rpc(name, { p_user: $('#cs-user').value, ...args }); toast(msg); await reloadCore(); fillConsole(); } catch (e) { fail(e); } };
+    $('#cs-save').onclick = () => csRun('admin_set_stats', { p_streak: parseInt($('#cs-streak').value) || 0, p_name: $('#cs-name').value || null, p_course: $('#cs-course').value || null }, 'Stats saved');
+    $('#cs-add').onclick = () => csRun('admin_add_tests', { p_subject: $('#cs-subj').value || 'Mathematics', p_score: parseInt($('#cs-score').value) || 0, p_total: parseInt($('#cs-total').value) || 20, p_days_ago: parseInt($('#cs-days').value) || 0, p_count: parseInt($('#cs-count').value) || 1 }, 'Results added');
+    $('#cs-demo').onclick = () => csRun('admin_demo_week', {}, 'Demo week added');
+    $('#cs-clear').onclick = async () => { if (await askConfirm('Delete ALL tests for this user?')) csRun('admin_clear_tests', {}, 'Tests cleared'); };
+
     /* --- Content Logic --- */
     $$('#content-tabs button').forEach(b => b.addEventListener('click', () => {
       ui.cTab = b.dataset.c;
       $$('#content-tabs button').forEach(x => x.classList.toggle('on', x === b));
-      ['notes', 'challenges', 'announce'].forEach(t => $(`#c-${t}`).style.display = t === ui.cTab ? 'block' : 'none');
+      ['notes', 'challenges', 'announce', 'console'].forEach(t => $(`#c-${t}`).style.display = t === ui.cTab ? 'block' : 'none');
       if (ui.cTab === 'notes') loadNotes();
       if (ui.cTab === 'challenges') loadChallenges();
       if (ui.cTab === 'announce') loadAnns();
+      if (ui.cTab === 'console') fillConsole();
     }));
 
     async function loadNotes() {
@@ -1149,6 +1295,7 @@
             <p>${esc(n.content)}</p>
             <div class="ann-actions">
               <button class="mini" onclick="toggleNote('${n.id}', ${n.active})">${n.active ? 'Hide' : 'Show'}</button>
+              <button class="mini" onclick="editItem('note','${n.id}')">Edit</button>
               <button class="mini del" onclick="deleteNote('${n.id}')">Delete</button>
             </div>
           </div>
@@ -1160,7 +1307,7 @@
       loadNotes();
     };
     window.deleteNote = async (id) => {
-      if(!confirm('Delete this note?')) return;
+      if(!(await askConfirm('Delete this note?'))) return;
       await sb.from('daily_notes').delete().eq('id', id);
       loadNotes();
     };
@@ -1169,13 +1316,16 @@
       const title = $('#note-title').value.trim();
       const content = $('#note-content').value.trim();
       const subject = $('#note-subject').value.trim() || null;
-      const short_test_count = parseInt($('#note-short').value) || 0;
+      let short_test_count = parseInt($('#note-short').value) || 0;
+      let questions = null;
+      try { questions = parseQs($('#note-json').value); } catch (e) { return toast(e.message, true); }
+      if (questions) short_test_count = questions.length;
       if (!title || !content) return toast('Title and content required', true);
 
-      const { error } = await sb.from('daily_notes').insert([{ title, content, subject, short_test_count, active: true }]);
+      const { error } = await sb.from('daily_notes').insert([{ title, content, subject, short_test_count, questions, active: true }]);
       if (error) return fail(error);
       
-      $('#note-title').value = ''; $('#note-content').value = ''; $('#note-subject').value = ''; $('#note-short').value = '0';
+      $('#note-title').value = ''; $('#note-content').value = ''; $('#note-subject').value = ''; $('#note-short').value = '0'; $('#note-json').value = '';
       toast('Note saved');
       loadNotes();
     });
@@ -1194,6 +1344,7 @@
             <p>${esc(c.description || '')} (Target: ${c.target})</p>
             <div class="ann-actions">
               <button class="mini" onclick="toggleCh('${c.id}', ${c.active})">${c.active ? 'Hide' : 'Show'}</button>
+              <button class="mini" onclick="editItem('ch','${c.id}')">Edit</button>
               <button class="mini del" onclick="deleteCh('${c.id}')">Delete</button>
             </div>
           </div>
@@ -1205,7 +1356,7 @@
       loadChallenges();
     };
     window.deleteCh = async (id) => {
-      if(!confirm('Delete this challenge?')) return;
+      if(!(await askConfirm('Delete this challenge?'))) return;
       await sb.from('challenges').delete().eq('id', id);
       loadChallenges();
     };
@@ -1240,10 +1391,12 @@
         if (!allAnns.length) { root.innerHTML = '<p class="empty">No announcements yet.</p>'; return; }
         root.innerHTML = allAnns.map(a => `
           <div class="ann">
-            <div class="ann-top"><h4>${esc(a.title)}</h4><em class="tag ${a.active ? 't-new' : ''}">${a.active ? 'Active' : 'Hidden'}</em></div>
+            <div class="ann-top"><h4>${esc(a.title)}</h4><em class="tag ${a.active ? 't-new' : ''}">${a.active ? 'Active' : 'Hidden'}</em>${a.notify ? '<em class="tag t-prem">Alert</em>' : ''}</div>
             <p>${esc(a.body)}</p>
             <div class="ann-actions">
               <button class="mini" onclick="toggleAnn('${a.id}', ${a.active})">${a.active ? 'Hide' : 'Show'}</button>
+              <button class="mini" onclick="toggleAnnNotify('${a.id}', ${!!a.notify})">${a.notify ? 'Alert off' : 'Alert on'}</button>
+              <button class="mini" onclick="editItem('ann','${a.id}')">Edit</button>
               <button class="mini del" onclick="deleteAnn('${a.id}')">Delete</button>
             </div>
           </div>
@@ -1255,7 +1408,7 @@
       loadAnns();
     };
     window.deleteAnn = async (id) => {
-      if(!confirm('Delete this announcement?')) return;
+      if(!(await askConfirm('Delete this announcement?'))) return;
       await sb.from('announcements').delete().eq('id', id);
       loadAnns();
     };
@@ -1264,7 +1417,7 @@
       const title = $('#ann-title').value.trim();
       const body = $('#ann-body').value.trim();
       if (!title || !body) return toast('Title and body required', true);
-      const { error } = await sb.from('announcements').insert([{ title, body, active: true }]);
+      const { error } = await sb.from('announcements').insert([{ title, body, active: true, notify: annNotify }]);
       if (error) return fail(error);
       $('#ann-title').value = ''; $('#ann-body').value = '';
       toast('Announcement published');
@@ -1363,11 +1516,7 @@
         title: 'Edit Stats',
         body: `<p class="txt">Modify user stats manually.</p>
                <label class="lbl">Streak Count</label>
-               <input class="field" id="ed-streak" type="number" value="${u.streak_count || 0}" />
-               <label class="lbl" style="margin-top:10px">Avg Score (%)</label>
-               <input class="field" id="ed-avg" type="number" value="${u.avg_pct || 0}" />
-               <label class="lbl" style="margin-top:10px">Tests Count</label>
-               <input class="field" id="ed-tests" type="number" value="${u.tests_count || 0}" />`,
+               <input class="field" id="ed-streak" type="number" value="${u.streak_count || 0}" />`,
         actions: [
           { label: 'Save Stats', style: 'primary', onClick: async () => {
             const streak = parseInt($('#ed-streak', root).value) || 0;

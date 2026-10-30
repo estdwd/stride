@@ -338,52 +338,17 @@
     function stopTimer() { clearInterval(timerInterval); }
 
     async function loadQuestions(cfg) {
-      let q = supabase
-        .from('questions')
-        .select('id, subject, year, difficulty, question, option_a, option_b, option_c, option_d, answer, image_url, explanation, section')
-        .in('subject', cfg.subjects);
-
-      // Filter by year if selected
-      if (cfg.year && cfg.year !== 'all') {
-        q = q.eq('year', cfg.year);
+      if (Array.isArray(cfg.custom) && cfg.custom.length) {
+        return cfg.custom.map((q, i) => ({ id: 'n' + i, subject: cfg.subjects[0], year: null, difficulty: 'medium', section: null, image_url: null, explanation: '', ...q }));
       }
-
-      const { data, error } = await q;
+      const { data, error } = await supabase.rpc('pick_questions', {
+        p_subjects: cfg.subjects,
+        p_year: String(cfg.year || 'all'),
+        p_count: cfg.count,
+        p_difficulty: cfg.difficulty || 'medium'
+      });
       if (error) throw error;
-      if (!data || !data.length) return [];
-
-      let easyQs = data.filter(q => q.difficulty === 'easy');
-      let medQs  = data.filter(q => q.difficulty === 'medium');
-      let hardQs = data.filter(q => q.difficulty === 'hard');
-
-      let finalPool = [];
-
-      if (cfg.difficulty === 'easy') {
-        finalPool = [
-          ...easyQs.sort(() => 0.5 - Math.random()).slice(0, Math.ceil(cfg.count * 0.5)),
-          ...medQs.sort(() => 0.5 - Math.random()).slice(0, Math.ceil(cfg.count * 0.3)),
-          ...hardQs.sort(() => 0.5 - Math.random()).slice(0, Math.ceil(cfg.count * 0.2))
-        ];
-      } else if (cfg.difficulty === 'hard') {
-        finalPool = [
-          ...medQs.sort(() => 0.5 - Math.random()).slice(0, Math.ceil(cfg.count * 0.3)),
-          ...hardQs.sort(() => 0.5 - Math.random()).slice(0, Math.ceil(cfg.count * 0.7))
-        ];
-      } else {
-        finalPool = [
-          ...easyQs.sort(() => 0.5 - Math.random()).slice(0, Math.ceil(cfg.count * 0.1)),
-          ...medQs.sort(() => 0.5 - Math.random()).slice(0, Math.ceil(cfg.count * 0.5)),
-          ...hardQs.sort(() => 0.5 - Math.random()).slice(0, Math.ceil(cfg.count * 0.4))
-        ];
-      }
-
-      if (finalPool.length < cfg.count) {
-        const existingIds = new Set(finalPool.map(q => q.id));
-        const leftovers = data.filter(q => !existingIds.has(q.id)).sort(() => 0.5 - Math.random());
-        finalPool = [...finalPool, ...leftovers].slice(0, cfg.count);
-      }
-
-      return finalPool.sort(() => 0.5 - Math.random()).slice(0, cfg.count);
+      return data || [];
     }
 
     function renderQuestion() {
