@@ -433,6 +433,19 @@
         <button data-c="challenges">Challenges</button>
         <button data-c="announce">Announcements</button>
         <button data-c="console">Console</button>
+        <button data-c="plan">Plan</button>
+      </div>
+
+      <div id="c-plan" style="margin-top:14px; display:none">
+        <div class="panel">
+          <h3>Plan for the Day</h3>
+          <p class="txt">One task per line (max 8). Students tick these off on their home screen.</p>
+          <div class="stack">
+            <textarea class="field" id="plan-text" style="min-height:140px" placeholder="10 Math questions&#10;Read today's note"></textarea>
+            <input class="field" id="plan-link" type="text" placeholder="Channel link (https://...)" />
+            <button class="btn" id="plan-save"><i data-lucide="save"></i> Save plan</button>
+          </div>
+        </div>
       </div>
 
       <div id="c-console" style="margin-top:14px; display:none">
@@ -493,6 +506,7 @@
               <button data-t="daily" class="on">Daily</button>
               <button data-t="weekly">Weekly</button>
             </div>
+            <div class="seg" id="ch-metric"><button data-m="tests" class="on">Tests</button><button data-m="notes">Notes</button><button data-m="both">Both</button></div>
             <button class="btn" id="ch-save"><i data-lucide="save"></i> Create Challenge</button>
           </div>
         </div>
@@ -1226,7 +1240,7 @@
     window.editItem = (kind, id) => {
       const cfg = {
         note: { table: 'daily_notes', rows: () => allNotes, reload: loadNotes, f: [['title','Title'],['subject','Subject'],['content','Markdown','ta'],['short_test_count','Short test Qs','num'],['questions','Questions JSON (max 10)','json']] },
-        ch:   { table: 'challenges', rows: () => allChallenges, reload: loadChallenges, f: [['title','Title'],['description','Description'],['target','Target','num'],['reward','Reward'],['type','Type (daily or weekly)']] },
+        ch:   { table: 'challenges', rows: () => allChallenges, reload: loadChallenges, f: [['title','Title'],['description','Description'],['target','Target','num'],['reward','Reward'],['type','Type (daily or weekly)'],['metric','Counts (tests, notes or both)']] },
         ann:  { table: 'announcements', rows: () => allAnns, reload: loadAnns, f: [['title','Title'],['body','Body','ta']] }
       }[kind];
       const row = cfg.rows().find(r => String(r.id) === String(id));
@@ -1270,15 +1284,38 @@
     $('#cs-demo').onclick = () => csRun('admin_demo_week', {}, 'Demo week added');
     $('#cs-clear').onclick = async () => { if (await askConfirm('Delete ALL tests for this user?')) csRun('admin_clear_tests', {}, 'Tests cleared'); };
 
+    let chMetric = 'tests';
+    $$('#ch-metric button').forEach(b => b.addEventListener('click', () => {
+      chMetric = b.dataset.m;
+      $$('#ch-metric button').forEach(x => x.classList.toggle('on', x === b));
+    }));
+    async function loadPlan() {
+      const { data } = await sb.from('app_settings').select('*').in('key', ['daily_plan', 'channel_link']);
+      const m = {}; (data || []).forEach(r => { m[r.key] = r.value; });
+      let items = []; try { items = JSON.parse(m.daily_plan || '[]'); } catch (e) {}
+      $('#plan-text').value = items.join('\n'); $('#plan-link').value = m.channel_link || '';
+    }
+    $('#plan-save').onclick = async () => {
+      const items = $('#plan-text').value.split('\n').map(x => x.trim()).filter(Boolean);
+      if (items.length > 8) return toast('Max 8 tasks', true);
+      if (items.some(x => x.length > 60)) return toast('Keep each task under 60 characters', true);
+      const link = $('#plan-link').value.trim();
+      if (link && !/^https:\/\//i.test(link)) return toast('Channel link must start with https://', true);
+      const { error } = await sb.from('app_settings').upsert([{ key: 'daily_plan', value: JSON.stringify(items) }, { key: 'channel_link', value: link }], { onConflict: 'key' });
+      if (error) return fail(error);
+      toast('Plan saved');
+    };
+
     /* --- Content Logic --- */
     $$('#content-tabs button').forEach(b => b.addEventListener('click', () => {
       ui.cTab = b.dataset.c;
       $$('#content-tabs button').forEach(x => x.classList.toggle('on', x === b));
-      ['notes', 'challenges', 'announce', 'console'].forEach(t => $(`#c-${t}`).style.display = t === ui.cTab ? 'block' : 'none');
+      ['notes', 'challenges', 'announce', 'console', 'plan'].forEach(t => $(`#c-${t}`).style.display = t === ui.cTab ? 'block' : 'none');
       if (ui.cTab === 'notes') loadNotes();
       if (ui.cTab === 'challenges') loadChallenges();
       if (ui.cTab === 'announce') loadAnns();
       if (ui.cTab === 'console') fillConsole();
+      if (ui.cTab === 'plan') loadPlan();
     }));
 
     async function loadNotes() {
@@ -1373,7 +1410,7 @@
       const reward = $('#ch-reward').value.trim();
       if (!title) return toast('Title required', true);
 
-      const { error } = await sb.from('challenges').insert([{ title, description, target, reward, type: ui.chType, active: true }]);
+      const { error } = await sb.from('challenges').insert([{ title, description, target, reward, type: ui.chType, metric: chMetric, active: true }]);
       if (error) return fail(error);
 
       $('#ch-title').value = ''; $('#ch-desc').value = ''; $('#ch-target').value = '3'; $('#ch-reward').value = '';

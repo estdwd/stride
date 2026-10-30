@@ -339,7 +339,7 @@
 
     async function loadQuestions(cfg) {
       if (Array.isArray(cfg.custom) && cfg.custom.length) {
-        return cfg.custom.map((q, i) => ({ id: 'n' + i, subject: cfg.subjects[0], year: null, difficulty: 'medium', section: null, image_url: null, explanation: '', ...q }));
+        return cfg.custom.map(({ answer, explanation, ...q }, i) => ({ id: 'n' + i, subject: cfg.subjects[0], year: null, difficulty: 'medium', section: null, image_url: null, ...q }));
       }
       const { data, error } = await supabase.rpc('pick_questions', {
         p_subjects: cfg.subjects,
@@ -447,40 +447,36 @@
       stopTimer();
 
       const total = questions.length;
+      const timeTaken = startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0;
+
+      let graded = [];
+      try {
+        const payload = {};
+        questions.forEach(q => { payload[q.id] = answers[q.id] || null; });
+        const { data, error } = await supabase.rpc('submit_test', { p_mode: config.mode, p_answers: payload, p_note: config.noteId || null });
+        if (error) throw error;
+        graded = data || [];
+      } catch (e) {
+        console.error(e);
+        toast('Could not save your result. Check your connection and submit again.');
+        submitting = false;
+        return;
+      }
+
       let correct = 0;
       const bySubject = {};
       const review = [];
-
+      const byId = {};
+      graded.forEach(g => { byId[g.id] = g; });
       questions.forEach(q => {
+        const g = byId[q.id] || {};
         const sub = q.subject || 'Mixed';
         if (!bySubject[sub]) bySubject[sub] = { score: 0, total: 0 };
         bySubject[sub].total++;
-
-        const chosen = answers[q.id] || null;
-        const isCorrect = chosen === q.answer;
+        const isCorrect = !!g.is_correct;
         if (isCorrect) { correct++; bySubject[sub].score++; }
-
-        review.push({
-          q: q.question,
-          chosen,
-          correct: q.answer,
-          isCorrect
-        });
+        review.push({ q: q.question, chosen: answers[q.id] || null, correct: g.correct || null, isCorrect });
       });
-
-      const timeTaken = startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0;
-
-      try {
-        const rows = Object.entries(bySubject).map(([subj, s]) => ({
-          user_id: currentUser.id,
-          subject: subj,
-          score: s.score,
-          total: s.total,
-          mode: config.mode,
-          date: new Date().toISOString()
-        }));
-        await supabase.from('tests').insert(rows);
-      } catch (e) { console.error(e); }
 
       try { localStorage.removeItem('stride_test_config'); } catch (e) {}
 
