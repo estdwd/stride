@@ -255,6 +255,24 @@
     .q-tag.easy { background: rgba(151,216,110,0.15); color: var(--green); }
     .q-tag.medium { background: rgba(248,203,74,0.15); color: var(--yellow); }
     .q-tag.hard { background: rgba(232,97,90,0.15); color: var(--red); }
+    .q-chk { width: 22px; height: 22px; border-radius: 7px; border: 1.5px solid rgba(255,255,255,.28); display: grid; place-items: center; flex-shrink: 0; margin-top: 1px; transition: background .2s, border-color .2s; }
+    .q-chk svg { width: 14px; height: 14px; color: #1a0d06; opacity: 0; transition: opacity .2s; }
+    .q-item.selecting { cursor: pointer; }
+    .q-item.sel { background: rgba(235,118,80,0.07); }
+    .q-item.sel .q-chk { background: var(--orange); border-color: var(--orange); }
+    .q-item.sel .q-chk svg { opacity: 1; }
+    .sel-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+    .sel-bar .cnt { flex: 1; min-width: 110px; font-size: .9rem; color: var(--muted); }
+    .mini:disabled { opacity: .45; pointer-events: none; }
+    .q-fmt { background: rgba(0,0,0,0.4); padding: 12px; border-radius: 12px; font-size: .72rem; line-height: 1.5; color: #8DB9EA; margin: 12px 0; overflow-x: auto; white-space: pre-wrap; word-break: break-word; }
+    .q-prev { margin-top: 10px; font-size: .85rem; }
+    .q-prev .ok { color: var(--green); font-weight: 600; }
+    .q-prev .bad { color: var(--red); font-weight: 600; }
+    .q-prev .ln { color: var(--muted); margin-top: 4px; line-height: 1.4; }
+    .cov-h { margin: 16px 0 6px; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .cov-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: .92rem; }
+    .cov-row b { font-weight: 600; color: var(--green); }
+    .cov-row b.zero { color: var(--red); }
 
     .year-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.07); border-radius: 20px; padding: 20px; text-align: center; cursor: pointer; transition: transform .2s; }
     .year-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.2); }
@@ -369,17 +387,6 @@
     </header>
 
     <section id="overview" class="page active">
-      <div id="console-panel" class="panel" style="display:none; border-color:var(--orange); background:rgba(235,118,80,0.05)">
-        <div class="panel-head">
-          <h3 style="color:var(--orange)">Console Mode Active</h3>
-          <small>Dev Tools</small>
-        </div>
-        <p class="txt" style="margin-bottom:12px;font-size:.85rem">Console mode is on. You can now edit raw stats or inject data.</p>
-        <div class="stack">
-          <button class="btn" id="console-inject-btn" style="background:var(--orange);color:#000"><i data-lucide="zap"></i> Inject Test Data to My Account</button>
-          <button class="m-btn" id="console-reset-btn">Reset My Streak to 0</button>
-        </div>
-      </div>
       <div id="ov-body"></div>
     </section>
 
@@ -415,12 +422,23 @@
           <button data-diff="medium">Medium</button>
           <button data-diff="hard">Hard</button>
         </div>
-        <button class="tool-btn" id="q-upload-btn"><i data-lucide="upload-cloud"></i>JSON</button>
+        <button class="tool-btn" id="q-upload-btn"><i data-lucide="upload-cloud"></i>Upload</button>
         <button class="tool-btn" id="q-add-btn"><i data-lucide="plus"></i>New</button>
+      </div>
+      <div class="tool-row" id="q-tool-extra">
+        <button class="tool-btn" id="q-cov-btn" style="flex:1"><i data-lucide="layers"></i>Coverage</button>
+        <button class="tool-btn" id="q-bulkdel-btn" style="flex:1;color:var(--red)"><i data-lucide="trash-2"></i>Bulk delete</button>
       </div>
       <div class="tool-row" id="q-tool-list" hidden>
         <button class="tool-btn" id="q-back-btn" style="flex:1"><i data-lucide="arrow-left"></i> Back to Years</button>
         <span id="q-year-label" style="font-weight:500;margin-left:10px">2025</span>
+        <button class="tool-btn" id="q-sel-btn"><i data-lucide="check"></i>Select</button>
+      </div>
+      <div class="sel-bar" id="q-sel-bar" hidden>
+        <span class="cnt" id="q-sel-cnt">0 selected</span>
+        <button class="mini" id="q-sel-all">Select all</button>
+        <button class="mini del" id="q-sel-del"><i data-lucide="trash-2"></i> Delete</button>
+        <button class="mini" id="q-sel-done">Done</button>
       </div>
       <div class="panel" style="padding:0" id="q-panel">
         <div id="q-list"></div>
@@ -441,7 +459,11 @@
           <h3>Plan for the Day</h3>
           <p class="txt">One task per line (max 8). Students tick these off on their home screen.</p>
           <div class="stack">
+            <label class="lbl">Show to</label>
+            <select class="field" id="plan-aud"><option value="all">Everyone</option><option value="sciences">Sciences</option><option value="arts">Arts</option><option value="commerce">Commerce</option></select>
+            <small id="plan-note" style="color:var(--muted);line-height:1.4"></small>
             <textarea class="field" id="plan-text" style="min-height:140px" placeholder="10 Math questions&#10;Read today's note"></textarea>
+            <div class="stack" id="plan-ctl"></div>
             <input class="field" id="plan-link" type="text" placeholder="Channel link (https://...)" />
             <button class="btn" id="plan-save"><i data-lucide="save"></i> Save plan</button>
           </div>
@@ -450,8 +472,22 @@
 
       <div id="c-console" style="margin-top:14px; display:none">
         <div class="panel">
-          <h3>Stats Console</h3>
-          <p class="txt">Edit any user's stats (handy for screenshots).</p>
+          <div class="panel-head"><h3>Live</h3><small id="live-stamp">updates every 30s</small></div>
+          <div class="stat-grid" id="live-grid" style="margin-bottom:0"></div>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>Tests per day</h3><small>last 14 days</small></div><div class="bars" id="live-bars"></div></div>
+        <div class="panel"><div class="panel-head"><h3>Top subjects</h3><small>last 30 days</small></div><div id="live-subj"></div></div>
+        <div class="panel">
+          <h3>Quick actions</h3>
+          <div class="stack">
+            <button class="btn" id="qa-refresh"><i data-lucide="refresh-cw"></i> Refresh everything</button>
+            <button class="btn" id="qa-csv"><i data-lucide="download"></i> Export users (CSV)</button>
+            <button class="btn" id="qa-clean"><i data-lucide="trash-2"></i> Clean up expired content</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Edit a student</h3>
+          <p class="txt">Changes the real account. Pick a student, then change their streak, name or course.</p>
           <div class="stack">
             <select class="field" id="cs-user"></select>
             <div class="two-col"><input class="field" id="cs-streak" type="number" placeholder="Streak" /><input class="field" id="cs-name" type="text" placeholder="Name" /></div>
@@ -460,7 +496,8 @@
           </div>
         </div>
         <div class="panel">
-          <h3>Test results</h3>
+          <h3>Test data</h3>
+          <p class="txt">Adds results to the student picked above. These count in the real stats until you clear them.</p>
           <div class="stack">
             <input class="field" id="cs-subj" type="text" placeholder="Subject (e.g. Physics)" />
             <div class="two-col"><input class="field" id="cs-score" type="number" placeholder="Score" value="15" /><input class="field" id="cs-total" type="number" placeholder="Out of" value="20" /></div>
@@ -468,6 +505,14 @@
             <button class="btn" id="cs-add"><i data-lucide="plus"></i> Add results</button>
             <button class="btn" id="cs-demo"><i data-lucide="sparkles"></i> Fill a demo week</button>
             <button class="mini del" id="cs-clear">Clear all tests for this user</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>My account</h3>
+          <p class="txt">For trying the app on your own login.</p>
+          <div class="stack">
+            <button class="btn" id="console-inject-btn" style="background:var(--orange);color:#000"><i data-lucide="zap"></i> Add a test result to my account</button>
+            <button class="m-btn" id="console-reset-btn">Reset my streak to 0</button>
           </div>
         </div>
       </div>
@@ -479,7 +524,9 @@
             <input class="field" id="note-title" type="text" placeholder="Title" />
             <input class="field" id="note-subject" type="text" placeholder="Subject (optional)" />
             <textarea class="field" id="note-content" placeholder="Markdown content" style="min-height:120px"></textarea>
-            <textarea class="field" id="note-json" style="min-height:90px;font-family:monospace" placeholder='Short test questions: paste a JSON array (max 10), e.g. [{"question":"2+2?","option_a":"3","option_b":"4","option_c":"5","option_d":"6","answer":"b","explanation":"..."}]'></textarea>
+            <textarea class="field" id="note-json" style="min-height:90px;font-family:monospace" placeholder="Short test questions (max 10), one per line:&#10;2 + 2 = ? A. 3 B. 4 C. 5 D. 6, ans: B, why: basic addition"></textarea>
+            <div class="stack" id="note-ctl"></div>
+            <small style="color:var(--muted);line-height:1.4">Expired notes disappear for students and are deleted from the database a day later.</small>
             <div class="two-col">
               <input class="field" id="note-short" type="number" placeholder="Short test Qs (e.g. 5)" value="0" />
               <button class="btn" id="note-save"><i data-lucide="save"></i> Save Note</button>
@@ -507,6 +554,7 @@
               <button data-t="weekly">Weekly</button>
             </div>
             <div class="seg" id="ch-metric"><button data-m="tests" class="on">Tests</button><button data-m="notes">Notes</button><button data-m="both">Both</button></div>
+            <div class="stack" id="ch-ctl"></div>
             <button class="btn" id="ch-save"><i data-lucide="save"></i> Create Challenge</button>
           </div>
         </div>
@@ -523,6 +571,8 @@
             <input class="field" id="ann-title" type="text" placeholder="Title" />
             <textarea class="field" id="ann-body" placeholder="Message"></textarea>
             <div class="seg two" id="ann-mode"><button data-m="0" class="on">Normal</button><button data-m="1">Alert popup</button></div>
+            <div class="stack" id="ann-ctl"></div>
+            <small style="color:var(--muted);line-height:1.4">Announcements and alert popups disappear when they expire and are deleted a day later.</small>
             <button class="btn" id="ann-save"><i data-lucide="megaphone"></i> Publish</button>
           </div>
         </div>
@@ -633,6 +683,9 @@
     let qFilter = { subject: 'All', difficulty: 'all', q: '' };
     let qViewMode = 'years';
     let currentYearFilter = 'all';
+    let qSel = new Set();
+    let qSelMode = false;
+    let qVisible = [];
 
     let allNotes = [];
     let allChallenges = [];
@@ -715,7 +768,17 @@
       return data;
     }
     async function loadUsers() { users = (await rpc('admin_list_users')) || []; }
-    async function loadStats() { stats = await rpc('admin_stats'); }
+    let act = null;
+    const seenMap = {};
+    const TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Lagos'; } catch (e) { return 'Africa/Lagos'; } })();
+    async function loadActivity(withSeen) {
+      try {
+        const a = await rpc('admin_activity', { p_tz: TZ, p_days: 62, p_with_seen: !!withSeen });
+        if (withSeen) { Object.keys(seenMap).forEach(k => delete seenMap[k]); (a.seen || []).forEach(x => { seenMap[x.id] = new Date(x.t).getTime(); }); }
+        act = a;
+      } catch (e) { act = null; }
+    }
+    async function loadStats() { stats = await rpc('admin_stats'); await loadActivity(true); }
     async function reloadCore() {
       const btn = $('#refresh-btn');
       btn.classList.add('spin');
@@ -740,34 +803,81 @@
         return `<div class="area"><div class="area-top"><span>${label}</span><span>${right}</span></div><div class="area-bar ${tone}"><div data-w="${pct}"></div></div></div>`;
       }).join('');
     }
+    ui.period = ui.period || 'week';
+    const PERIODS = [['today', 'Today'], ['week', 'This week'], ['month', 'This month']];
+    function periodStart(p) {
+      const d = new Date(); d.setHours(0, 0, 0, 0);
+      if (p === 'week') d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+      if (p === 'month') d.setDate(1);
+      return d;
+    }
+    const dayKey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    function lastActive(u) { return Math.max(u.last_sign_in_at ? new Date(u.last_sign_in_at).getTime() : 0, seenMap[u.id] || 0); }
+    function periodTotals() {
+      const from = dayKey(periodStart(ui.period));
+      const days = ((act && act.days) || []).filter(d => d.d >= from);
+      const t = days.reduce((a, d) => ({ tests: a.tests + Number(d.tests), qs: a.qs + Number(d.qs), pct: a.pct + Number(d.pct) }), { tests: 0, qs: 0, pct: 0 });
+      return { tests: t.tests, qs: t.qs, avg: t.tests ? Math.round(t.pct / t.tests * 10) / 10 : 0 };
+    }
+    // Buckets for charts: last 14 days, or last 8 weeks when "This month" is chosen.
+    function buckets() {
+      const out = [];
+      const weekly = ui.period === 'month';
+      const w0 = periodStart('week');
+      const d0 = periodStart('today');
+      const n = weekly ? 8 : 14;
+      for (let i = n - 1; i >= 0; i--) {
+        const a = new Date(weekly ? w0 : d0);
+        a.setDate(a.getDate() - i * (weekly ? 7 : 1));
+        const b = new Date(a); b.setDate(b.getDate() + (weekly ? 7 : 1));
+        out.push({ a, b, lab: weekly ? a.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) : a.toLocaleDateString(undefined, { weekday: 'narrow' }), tip: a.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) });
+      }
+      return out;
+    }
+    function chartHtml(items) {
+      const maxN = Math.max(...items.map(d => d.n), 1);
+      return items.map(d => `<div class="bar ${d.n ? '' : 'zero'}" title="${esc(d.tip)}: ${d.n}"><b>${d.n || ''}</b><i data-h="${Math.max(4, Math.round(d.n / maxN * 100))}"></i><span>${esc(d.lab)}</span></div>`).join('');
+    }
+    function signupItems() {
+      return buckets().map(b => ({ lab: b.lab, tip: b.tip, n: users.filter(u => { const t = new Date(u.created_at); return t >= b.a && t < b.b; }).length }));
+    }
+    function testItems() {
+      const days = (act && act.days) || [];
+      return buckets().map(b => {
+        const lo = dayKey(b.a), hi = dayKey(b.b);
+        return { lab: b.lab, tip: b.tip, n: days.filter(d => d.d >= lo && d.d < hi).reduce((s, d) => s + Number(d.tests), 0) };
+      });
+    }
+    const PLABEL = { today: 'today', week: 'this week', month: 'this month' };
     function renderOverview() {
       const root = $('#ov-body');
       if (!stats) { root.innerHTML = '<p class="empty">No data yet.</p>'; return; }
       const s = stats;
-      const days = s.signups || [];
-      const maxN = Math.max(...days.map(d => d.n), 1);
-      const chart = days.map(d => {
-        const letter = new Date(d.d + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'narrow' });
-        return `<div class="bar ${d.n ? '' : 'zero'}" title="${esc(d.d)}: ${d.n}"><b>${d.n || ''}</b><i data-h="${Math.max(4, Math.round(d.n / maxN * 100))}"></i><span>${letter}</span></div>`;
-      }).join('');
+      const p = ui.period, pl = PLABEL[p];
+      const start = periodStart(p).getTime();
+      const newN = users.filter(u => new Date(u.created_at).getTime() >= start).length;
+      const activeN = (act && act.active) ? act.active[p] : users.filter(u => lastActive(u) >= start).length;
+      const pt = act ? periodTotals() : null;
+      const tests = pt ? pt.tests : s.tests_7d, qs = pt ? pt.qs : s.questions, avg = pt ? pt.avg : (s.avg_score || 0);
       root.innerHTML = `
+        <div class="seg" id="ov-period" style="margin-bottom:14px">${PERIODS.map(([k, l]) => `<button data-p="${k}" class="${k === p ? 'on' : ''}">${l}</button>`).join('')}</div>
         <div class="grid">
-          ${statCard('c-orange', 'All users', `${fmtN(s.new_today)} joined today`, s.total_users, 'users', 'all')}
-          ${statCard('c-green', 'Active', 'signed in this week', s.active_7d, 'activity', 'active')}
-          ${statCard('c-blue', 'New', 'joined this week', s.new_7d, 'user-plus', 'new')}
+          ${statCard('c-orange', 'All users', `${fmtN(newN)} joined ${pl}`, s.total_users, 'users', 'all')}
+          ${statCard('c-green', 'Active', `used the app ${pl}`, activeN, 'activity', 'active')}
+          ${statCard('c-blue', 'New', `joined ${pl}`, newN, 'user-plus', 'new')}
           ${statCard('c-yellow', 'Premium', 'paid subscribers', s.premium, 'crown', 'premium')}
         </div>
         <div class="stat-grid">
           <button class="stat" data-go="suspended"><div class="k">Suspended</div><div class="v">${fmtN(s.suspended)}</div></button>
           <button class="stat" data-go="admin"><div class="k">Admins</div><div class="v">${fmtN(s.admins)}</div></button>
-          <div class="stat"><div class="k">Tests taken</div><div class="v">${fmtN(s.tests_total)}</div></div>
-          <div class="stat"><div class="k">Average score</div><div class="v">${s.avg_score || 0}<small>%</small></div></div>
-          <div class="stat"><div class="k">Questions answered</div><div class="v">${fmtN(s.questions)}</div></div>
-          <div class="stat"><div class="k">Tests this week</div><div class="v">${fmtN(s.tests_7d)}</div></div>
+          <div class="stat"><div class="k">Tests ${pl}</div><div class="v">${fmtN(tests)}</div><div class="k" style="margin:8px 0 0">${fmtN(s.tests_total)} all time</div></div>
+          <div class="stat"><div class="k">Average score ${pl}</div><div class="v">${avg}<small>%</small></div><div class="k" style="margin:8px 0 0">${s.avg_score || 0}% all time</div></div>
+          <div class="stat"><div class="k">Questions ${pl}</div><div class="v">${fmtN(qs)}</div><div class="k" style="margin:8px 0 0">${fmtN(s.questions)} all time</div></div>
           <button class="stat" data-tab="payments"><div class="k">Pending payments</div><div class="v">${fmtN(s.pending_payments)}</div></button>
-          <div class="stat"><div class="k">Revenue · 30 days</div><div class="v">${naira(s.revenue_30d)}</div><div class="k" style="margin:8px 0 0">${naira(s.revenue_total)} all time</div></div>
+          <div class="stat" style="grid-column:1 / -1"><div class="k">Revenue · 30 days</div><div class="v">${naira(s.revenue_30d)}</div><div class="k" style="margin:8px 0 0">${naira(s.revenue_total)} all time</div></div>
         </div>
-        <div class="panel"><div class="panel-head"><h3>Sign-ups</h3><small>last 14 days</small></div><div class="bars">${chart}</div></div>
+        <div class="panel"><div class="panel-head"><h3>Sign-ups</h3><small>${p === 'month' ? 'last 8 weeks' : 'last 14 days'}</small></div><div class="bars">${chartHtml(signupItems())}</div></div>
+        ${act ? `<div class="panel"><div class="panel-head"><h3>Tests taken</h3><small>${p === 'month' ? 'last 8 weeks' : 'last 14 days'}</small></div><div class="bars">${chartHtml(testItems())}</div></div>` : ''}
         <div class="panel"><div class="panel-head"><h3>Courses</h3><small>students per course</small></div>${bars(s.courses || [], 'course', '')}</div>
         <div class="panel"><div class="panel-head"><h3>Top schools</h3><small>first choice</small></div>${bars(s.schools || [], 'school', '')}</div>
         <div class="panel"><div class="panel-head"><h3>Subjects</h3><small>average score</small></div>${bars(s.subjects || [], 'subject', '')}</div>`;
@@ -776,6 +886,7 @@
         $$('[data-w]', root).forEach(el => el.style.width = el.dataset.w + '%');
         $$('[data-h]', root).forEach(el => el.style.height = el.dataset.h + '%');
       }));
+      $$('#ov-period button', root).forEach(b => b.addEventListener('click', () => { ui.period = b.dataset.p; renderOverview(); }));
       $$('[data-tab]', root).forEach(el => el.addEventListener('click', () => goTo(el.dataset.tab)));
       $$('[data-go]', root).forEach(el => el.addEventListener('click', () => {
         ui.filter = el.dataset.go; ui.q = ''; $('#user-search').value = '';
@@ -784,18 +895,17 @@
     }
 
     $('#console-btn').addEventListener('click', () => {
-      consoleMode = !consoleMode;
-      $('#console-btn').classList.toggle('on', consoleMode);
-      $('#console-panel').style.display = consoleMode ? 'block' : 'none';
-      toast(consoleMode ? 'Console mode enabled' : 'Console mode disabled');
+      goTo('content');
+      const b = $('#content-tabs button[data-c="console"]');
+      if (b) b.click();
     });
-    
+
     $('#console-inject-btn').addEventListener('click', async () => {
       try {
         await sb.from('tests').insert([{
            user_id: me.id, subject: 'Mathematics', score: 18, total: 20, mode: 'practice', date: new Date().toISOString()
         }]);
-        toast('Injected test score');
+        toast('Added a test result to your account');
         reloadCore();
       } catch(e) { fail(e); }
     });
@@ -803,15 +913,15 @@
     $('#console-reset-btn').addEventListener('click', async () => {
       try {
         await sb.from('profiles').update({ streak_count: 0 }).eq('id', me.id);
-        toast('Streak reset to 0');
+        toast('Your streak is now 0');
         reloadCore();
       } catch(e) { fail(e); }
     });
 
     const FILTERS = [
       ['all', 'All', () => true],
-      ['active', 'Active', u => u.last_sign_in_at && Date.now() - new Date(u.last_sign_in_at).getTime() < 7 * DAY],
-      ['new', 'New', isNew],
+      ['active', 'Active', u => lastActive(u) >= periodStart(ui.period).getTime()],
+      ['new', 'New', u => new Date(u.created_at).getTime() >= periodStart(ui.period).getTime()],
       ['premium', 'Premium', isPrem],
       ['suspended', 'Suspended', isSusp],
       ['admin', 'Admins', isAdm],
@@ -882,9 +992,15 @@
       const root = $('#q-list');
       if (!allQs.length) root.innerHTML = '<p class="empty">Loading…</p>';
       try {
-        const { data, error } = await sb.from('questions').select('*').order('created_at', { ascending: false }).limit(2000);
-        if (error) throw error;
-        allQs = data || [];
+        let rows = [], from = 0;
+        for (;;) {
+          const { data, error } = await sb.from('questions').select('*').order('created_at', { ascending: false }).order('id').range(from, from + 999);
+          if (error) throw error;
+          rows = rows.concat(data || []);
+          if (!data || data.length < 1000 || rows.length >= 5000) break;
+          from += 1000;
+        }
+        allQs = rows;
         renderQs();
       } catch (e) {
         fail(e);
@@ -905,6 +1021,7 @@
       
       $$('#q-subject-pills .pill').forEach(b => b.addEventListener('click', () => { 
         qFilter.subject = b.dataset.subj; 
+        exitSel();
         qViewMode = 'years';
         currentYearFilter = 'all';
         renderQs(); 
@@ -924,7 +1041,9 @@
 
       if (qViewMode === 'years') {
         $('#q-tool-year').hidden = false;
+        $('#q-tool-extra').hidden = false;
         $('#q-tool-list').hidden = true;
+        $('#q-sel-bar').hidden = true;
 
         const yearCounts = {};
         filtered.forEach(q => {
@@ -948,13 +1067,17 @@
 
         $$('.year-card', root).forEach(c => c.addEventListener('click', () => {
           currentYearFilter = c.dataset.year;
+          exitSel();
           qViewMode = 'list';
           renderQs();
         }));
 
       } else {
         $('#q-tool-year').hidden = true;
+        $('#q-tool-extra').hidden = true;
         $('#q-tool-list').hidden = false;
+        $('#q-sel-bar').hidden = !qSelMode;
+        $('#q-sel-btn').hidden = qSelMode;
         $('#q-year-label').textContent = currentYearFilter === 'Unknown' ? 'Unknown Year' : currentYearFilter;
 
         const yearQs = filtered.filter(q => (q.year || 'Unknown') == currentYearFilter);
@@ -964,14 +1087,19 @@
           return;
         }
 
+        qVisible = yearQs.map(q => String(q.id));
+        const vis = new Set(qVisible);
+        qSel = new Set([...qSel].filter(id => vis.has(id)));
+
         root.innerHTML = yearQs.map(q => `
-          <div class="q-item">
+          <div class="q-item${qSelMode ? ' selecting' : ''}${qSel.has(String(q.id)) ? ' sel' : ''}" data-id="${esc(q.id)}">
             <div class="q-item-top">
+              ${qSelMode ? '<div class="q-chk"><i data-lucide="check"></i></div>' : ''}
               <div class="q-item-text">${esc(q.question)}</div>
-              <div class="q-item-actions">
+              ${qSelMode ? '' : `<div class="q-item-actions">
                 <button class="q-mini-btn" data-edit="${esc(q.id)}" aria-label="Edit"><i data-lucide="pencil"></i></button>
                 <button class="q-mini-btn del" data-del="${esc(q.id)}" aria-label="Delete"><i data-lucide="trash-2"></i></button>
-              </div>
+              </div>`}
             </div>
             <div class="q-item-meta">
               <span class="q-tag sub">${esc(q.subject)}</span>
@@ -986,10 +1114,19 @@
 
         $$('[data-edit]', root).forEach(b => b.addEventListener('click', () => openQModal(b.dataset.edit)));
         $$('[data-del]', root).forEach(b => b.addEventListener('click', () => deleteQ(b.dataset.del)));
+        if (qSelMode) {
+          $$('.q-item', root).forEach(el => el.addEventListener('click', () => {
+            const id = el.dataset.id;
+            if (qSel.has(id)) qSel.delete(id); else qSel.add(id);
+            el.classList.toggle('sel', qSel.has(id));
+            updateSelBar();
+          }));
+          updateSelBar();
+        }
       }
     }
 
-    $('#q-back-btn').addEventListener('click', () => { qViewMode = 'years'; renderQs(); });
+    $('#q-back-btn').addEventListener('click', () => { exitSel(); qViewMode = 'years'; renderQs(); });
 
     function openQModal(id) {
       const isEdit = !!id;
@@ -1000,10 +1137,10 @@
           <div class="two-col">
             <div class="stack">
               <label class="lbl">Subject</label>
-              <input class="field" id="q-f-subj" list="subj-list" value="${q ? esc(q.subject) : (qFilter.subject !== 'All' ? qFilter.subject : '')}" placeholder="e.g. Fine Arts">
-              <datalist id="subj-list">
-                ${SUBJECTS.map(s => `<option value="${s}">`).join('')}
-              </datalist>
+              <select class="field" id="q-f-subj">
+                <option value="">Choose subject</option>
+                ${Array.from(new Set([...SUBJECTS, ...(q && q.subject ? [q.subject] : [])])).sort().map(s => `<option value="${esc(s)}" ${s === (q ? q.subject : (qFilter.subject !== 'All' ? qFilter.subject : '')) ? 'selected' : ''}>${esc(s)}</option>`).join('')}
+              </select>
             </div>
             <div class="stack">
               <label class="lbl">Difficulty</label>
@@ -1119,76 +1256,375 @@
       });
     }
 
-    function openJsonUpload() {
+    /* --- Question text format: one question per line --- */
+    const SUBJ_ALIAS = (() => {
+      const m = {};
+      SUBJECTS.forEach(x => { m[x.toLowerCase()] = x; });
+      Object.entries({
+        'maths': 'Mathematics', 'math': 'Mathematics', 'eng': 'English', 'use of english': 'English', 'english language': 'English',
+        'phy': 'Physics', 'chem': 'Chemistry', 'bio': 'Biology', 'econs': 'Economics', 'econ': 'Economics',
+        'govt': 'Government', 'gov': 'Government', 'lit': 'Literature', 'literature in english': 'Literature',
+        'crs': 'CRS / IRS', 'irs': 'CRS / IRS', 'crk': 'CRS / IRS', 'crs/irs': 'CRS / IRS',
+        'christian religious studies': 'CRS / IRS', 'islamic religious studies': 'CRS / IRS',
+        'acct': 'Accounting', 'principles of accounts': 'Accounting', 'further math': 'Further Maths',
+        'further mathematics': 'Further Maths', 'computer': 'Computer Studies', 'agric': 'Agricultural Science',
+        'agriculture': 'Agricultural Science', 'art': 'Fine Arts', 'geo': 'Geography'
+      }).forEach(([k, v]) => { m[k] = v; });
+      return m;
+    })();
+    const normSubject = x => SUBJ_ALIAS[String(x || '').trim().toLowerCase().replace(/\s+/g, ' ')] || null;
+    const Q_HEAD = /^(sub|subject|year|yr|diff|difficulty|sec|section|topic)\s*[:=]/i;
+    const Q_ANS = /(?:^|[\s,;])ans(?:wer)?\s*[:=]\s*\(?([A-Da-d])\b/i;
+
+    function parseQLine(line) {
+      const marks = [];
+      const re = /(?:^|[\s,;(])([A-D])(?:\.\s+|\)\s*)/g;
+      let m;
+      while ((m = re.exec(line))) marks.push({ l: m[1], start: m.index + m[0].indexOf(m[1]), end: m.index + m[0].length });
+      let pick = null;
+      for (let i = marks.length - 1; i >= 0 && !pick; i--) {
+        if (marks[i].l !== 'A') continue;
+        const b = marks.findIndex((x, k) => k > i && x.l === 'B');
+        const c = b < 0 ? -1 : marks.findIndex((x, k) => k > b && x.l === 'C');
+        const d = c < 0 ? -1 : marks.findIndex((x, k) => k > c && x.l === 'D');
+        if (d > 0) pick = [marks[i], marks[b], marks[c], marks[d]];
+      }
+      if (!pick) return { err: 'could not find options A. B. C. D.' };
+      const rest = line.slice(pick[3].end);
+      const am = Q_ANS.exec(rest);
+      if (!am) return { err: 'missing "ans: A" (or B, C, D) after option D' };
+      const clean = t => t.replace(/[\s,;]+$/, '').trim();
+      const q = line.slice(0, pick[0].start).replace(/[\s,;(]+$/, '').trim();
+      const o = [
+        clean(line.slice(pick[0].end, pick[1].start)),
+        clean(line.slice(pick[1].end, pick[2].start)),
+        clean(line.slice(pick[2].end, pick[3].start)),
+        clean(rest.slice(0, am.index))
+      ];
+      let why = rest.slice(am.index + am[0].length).replace(/^[\s,;.)]+/, '');
+      const wm = /^(?:why|exp(?:l(?:anation)?)?)\s*[:=]\s*/i.exec(why);
+      if (wm) why = why.slice(wm[0].length);
+      if (q.length < 3) return { err: 'question text is empty' };
+      const miss = o.findIndex(x => !x);
+      if (miss >= 0) return { err: 'option ' + 'ABCD'[miss] + ' is empty' };
+      return { q, a: o[0], b: o[1], c: o[2], d: o[3], ans: am[1].toLowerCase(), why: why.trim() };
+    }
+
+    function parseQText(txt, o) {
+      const qs = [], errs = [];
+      const cur = { subject: null, year: null, difficulty: 'medium', section: null };
+      let n = 0;
+      String(txt || '').split(/\r?\n/).forEach((raw, i) => {
+        const line = raw.trim();
+        if (!line) return;
+        if (Q_HEAD.test(line) && !/(?:^|[\s,;])ans(?:wer)?\s*[:=]/i.test(line)) {
+          const re = /(sub|subject|year|yr|diff|difficulty|sec|section|topic)\s*[:=]\s*([^,;]*)/gi;
+          let m;
+          if (/(?:^|[\s,;])(?:sub|subject)\s*[:=]/i.test(line)) { cur.year = null; cur.difficulty = 'medium'; cur.section = null; }
+          while ((m = re.exec(line))) {
+            const k = m[1].toLowerCase(), v = m[2].trim();
+            if (k === 'sub' || k === 'subject') {
+              const sj = normSubject(v);
+              if (!sj && !o.loose) errs.push({ n: n + 1, line: i + 1, msg: 'unknown subject "' + v + '". Use a name from the Coverage list' });
+              cur.subject = sj || (o.loose ? null : '__bad');
+            } else if (k === 'year' || k === 'yr') {
+              if (/^(none|-|n\/a|null|)$/i.test(v)) cur.year = null;
+              else if (/^\d{4}$/.test(v)) cur.year = parseInt(v, 10);
+              else errs.push({ n: n + 1, line: i + 1, msg: 'bad year "' + v + '"' });
+            } else if (k === 'diff' || k === 'difficulty') {
+              const d = v.toLowerCase()[0];
+              cur.difficulty = d === 'e' ? 'easy' : d === 'h' ? 'hard' : d === 'm' ? 'medium' : cur.difficulty;
+            } else cur.section = v || null;
+          }
+          return;
+        }
+        n++;
+        const r = parseQLine(line);
+        if (r.err) { errs.push({ n, line: i + 1, msg: r.err }); return; }
+        if (!o.loose && !cur.subject) { errs.push({ n, line: i + 1, msg: 'no subject yet. Add a header line first, like  sub: Physics, year: 2019' }); return; }
+        if (cur.subject === '__bad') return;
+        qs.push({ subject: cur.subject, difficulty: cur.difficulty, year: cur.year, section: cur.section, question: r.q, option_a: r.a, option_b: r.b, option_c: r.c, option_d: r.d, answer: r.ans, explanation: r.why || null });
+      });
+      return { qs, errs };
+    }
+
+    function parseQJson(txt, o) {
+      let a;
+      try { a = JSON.parse(txt); } catch (e) { return { qs: [], errs: [{ n: 1, line: 1, msg: 'invalid JSON' }] }; }
+      if (!Array.isArray(a)) a = [a];
+      const qs = [], errs = [];
+      a.forEach((x, i) => {
+        const ans = String((x && x.answer) || '').toLowerCase();
+        if (!x || !x.question || !x.option_a || !x.option_b || !['a', 'b', 'c', 'd'].includes(ans)) { errs.push({ n: i + 1, line: i + 1, msg: 'needs question, option_a, option_b, answer (a-d)' }); return; }
+        const sj = normSubject(x.subject) || (x.subject ? String(x.subject).trim() : null);
+        if (!o.loose && !sj) { errs.push({ n: i + 1, line: i + 1, msg: 'missing subject' }); return; }
+        qs.push(Object.assign({}, x, { subject: sj, answer: ans }));
+      });
+      return { qs, errs };
+    }
+    function parseQInput(txt, o) {
+      const t = String(txt || '').trim();
+      if (!t) return { qs: [], errs: [] };
+      return (t[0] === '[' || t[0] === '{') ? parseQJson(t, o || {}) : parseQText(t, o || {});
+    }
+    const oneLine = x => String(x == null ? '' : x).replace(/\s*\n\s*/g, ' ').trim();
+    const qsToText = arr => (arr || []).map(q => `${oneLine(q.question)} A. ${oneLine(q.option_a)} B. ${oneLine(q.option_b)} C. ${oneLine(q.option_c)} D. ${oneLine(q.option_d)}, ans: ${String(q.answer || '').toUpperCase()}${q.explanation ? ', why: ' + oneLine(q.explanation) : ''}`).join('\n');
+
+    const aiPrompt = () => String.raw`You are a JAMB UTME question setter. Write multiple-choice questions in the exact style of real JAMB past questions (Nigeria, current syllabus).
+
+OUTPUT FORMAT (follow it exactly and output nothing else):
+
+1) Start with ONE header line:
+sub: <Subject>, year: <YYYY>
+- Subject must be exactly one of: ${SUBJECTS.join(', ')}
+- If the questions are not from a specific past paper, write: year: none
+- Optional extras on the same line: diff: easy|medium|hard and sec: <topic>
+  Example: sub: Physics, year: 2019, diff: medium, sec: Mechanics
+- Add a new header line whenever the subject, year, difficulty or topic changes. It applies to every question below it.
+
+2) Then write ONE question per line, in this shape:
+<question> A. <option> B. <option> C. <option> D. <option>, ans: <A, B, C or D>, why: <short reason>
+
+STRICT RULES
+- Every question sits on ONE line. Never break a question across lines. No blank lines needed.
+- No numbering, bullets, bold, markdown, code blocks, tables, or any text before or after the questions.
+- Exactly four options A to D and exactly one correct answer. Wrong options must be believable JAMB-style distractors.
+- Never write "A." "B." "C." "D." or the words "ans:" or "why:" inside a question or inside an option.
+- Maths and science: write formulas in LaTeX between single dollar signs, e.g. $x^2 + 5x + 6 = 0$, $\frac{3}{4}$, $\sqrt{16}$. For money write N500, not a dollar sign.
+- Keep "why" to one short, correct sentence (under 25 words).
+- Match the JAMB tone: short, direct, formal Nigerian English, clean numbers, one clear idea per question. English: lexis and structure, synonyms and antonyms, concord, sentence interpretation. Literature: the current JAMB recommended texts. Sciences: calculation and concept questions the way JAMB asks them.
+- Use real JAMB past questions ONLY when you are certain of the exact wording and answer. If you are not certain, write a new original question in the same style and topic and use year: none. Never guess a year.
+- Check every answer twice before writing it.
+
+EXAMPLE OUTPUT
+sub: Physics, year: 2019
+A body moves at constant velocity when A. the net force is zero B. the force is constant C. there is no friction D. it has no mass, ans: A, why: zero net force means no change in velocity
+sub: English, year: none, diff: hard
+Choose the word nearest in meaning to "abate" A. increase B. lessen C. hide D. praise, ans: B, why: abate means to become less intense
+
+MY REQUEST:
+<write what you want here, for example: 20 Chemistry questions on acids, bases and salts>`;
+
+    function copyText(t) {
+      const ok = () => toast('Prompt copied');
+      const fb = () => {
+        const ta = document.createElement('textarea');
+        ta.value = t; ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); ok(); } catch (e) { toast('Could not copy', true); }
+        ta.remove();
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, fb); else fb();
+    }
+
+    function openBulkUpload() {
       const body = `
-        <p class="txt">Paste an array of question objects.</p>
-        <pre style="background:rgba(0,0,0,0.4);padding:12px;border-radius:12px;font-size:.75rem;color:#8DB9EA;margin:12px 0;overflow-x:auto">[
-  {
-    "subject": "Mathematics",
-    "difficulty": "medium",
-    "year": 2023,
-    "section": "Algebra",
-    "question": "Solve for $x$: $2x + 5 = 15$",
-    "option_a": "5", "option_b": "10", "option_c": "15", "option_d": "20",
-    "answer": "a",
-    "explanation": "2x = 10, so x = 5"
-  }
-]</pre>
-        <textarea class="field" id="json-in" style="min-height:150px;font-family:monospace" placeholder="[{...}, {...}]"></textarea>
+        <p class="txt">A header line sets the subject and year for every question under it. Then one question per line.</p>
+        <pre class="q-fmt">sub: Physics, year: 2019
+A body moves at constant velocity when A. the net force is zero B. the force is constant C. there is no friction D. it has no mass, ans: A, why: Newton's first law
+sub: English, year: none, diff: hard
+Choose the word nearest in meaning to "abate" A. increase B. lessen C. hide D. praise, ans: B, why: abate means to lessen</pre>
+        <button class="mini" id="q-copy-prompt" type="button"><i data-lucide="copy"></i> Copy AI prompt</button>
+        <textarea class="field" id="q-bulk-in" style="min-height:170px;font-family:monospace;margin-top:12px" placeholder="Paste questions here..."></textarea>
+        <div class="q-prev" id="q-prev"></div>
       `;
+      let parsed = { qs: [], errs: [] };
       const root = openModal({
-        title: 'Bulk Upload JSON',
+        title: 'Upload Questions',
         body,
         actions: [
           { label: 'Upload Questions', style: 'primary', close: false, onClick: async () => {
-            let parsed = [];
-            try {
-              parsed = JSON.parse($('#json-in', root).value);
-              if (!Array.isArray(parsed)) throw new Error('Must be an array');
-            } catch (e) { return toast('Invalid JSON format', true); }
-            if (!parsed.length) return toast('Array is empty', true);
-
-            const btn = $('.modal-actions .primary', modalEl);
-            btn.disabled = true; btn.textContent = 'Uploading...';
-
-            const { error } = await sb.from('questions').insert(parsed);
-
-            btn.disabled = false; btn.textContent = 'Upload Questions';
-            if (error) { toast(error.message, true); return; }
-            
+            const { qs, errs } = parsed;
+            if (!qs.length || errs.length) return false;
+            up.textContent = 'Uploading...';
+            for (let i = 0; i < qs.length; i += 200) {
+              const { error } = await sb.from('questions').insert(qs.slice(i, i + 200));
+              if (error) {
+                up.textContent = 'Upload Questions';
+                toast((i ? 'Stopped after ' + i + ' questions: ' : '') + error.message, true);
+                if (i) loadQs();
+                return false;
+              }
+            }
             closeModal();
-            toast(`Uploaded ${parsed.length} questions`);
+            toast(`Uploaded ${qs.length} question${qs.length > 1 ? 's' : ''}`);
+            loadQs();
+          } },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
+      const up = $('.modal-actions .primary', modalEl);
+      up.disabled = true;
+      const ta = $('#q-bulk-in', root), prev = $('#q-prev', root);
+      const refresh = () => {
+        parsed = parseQInput(ta.value, {});
+        const { qs, errs } = parsed;
+        let h = '';
+        if (!ta.value.trim()) h = '';
+        else if (errs.length) {
+          h = `<div class="bad">${errs.length} problem${errs.length > 1 ? 's' : ''}, fix to upload (${qs.length} OK so far)</div>` +
+            errs.slice(0, 5).map(e => `<div class="ln">Question ${e.n} (line ${e.line}): ${esc(e.msg)}</div>`).join('') +
+            (errs.length > 5 ? `<div class="ln">...and ${errs.length - 5} more</div>` : '');
+        } else if (!qs.length) h = '<div class="bad">No questions found</div>';
+        else {
+          const g = {};
+          qs.forEach(q => { const k = q.subject + (q.year ? ' ' + q.year : ''); g[k] = (g[k] || 0) + 1; });
+          h = `<div class="ok">${qs.length} question${qs.length > 1 ? 's' : ''} found</div><div class="ln">${Object.entries(g).map(([k, v]) => esc(k) + ': ' + v).join(' · ')}</div>`;
+        }
+        prev.innerHTML = h;
+        up.disabled = !(qs.length && !errs.length);
+      };
+      ta.addEventListener('input', refresh);
+      $('#q-copy-prompt', root).addEventListener('click', () => copyText(aiPrompt()));
+    }
+
+    /* --- Select, bulk delete, coverage --- */
+    function exitSel() { qSelMode = false; qSel.clear(); }
+    function updateSelBar() {
+      $('#q-sel-cnt').textContent = qSel.size + ' of ' + qVisible.length + ' selected';
+      $('#q-sel-all').textContent = (qVisible.length && qSel.size === qVisible.length) ? 'Clear' : 'Select all';
+      $('#q-sel-del').disabled = !qSel.size;
+    }
+    function deleteSelected() {
+      const ids = [...qSel];
+      if (!ids.length) return;
+      const nTxt = ids.length + ' question' + (ids.length > 1 ? 's' : '');
+      openModal({
+        title: 'Delete ' + nTxt + '?',
+        body: '<p class="txt">This cannot be undone.</p>',
+        actions: [
+          { label: 'Delete', style: 'danger', onClick: async () => {
+            for (let i = 0; i < ids.length; i += 100) {
+              const { error } = await sb.from('questions').delete().in('id', ids.slice(i, i + 100));
+              if (error) { toast(error.message, true); exitSel(); loadQs(); return; }
+            }
+            toast('Deleted ' + nTxt);
+            exitSel();
             loadQs();
           } },
           { label: 'Cancel', style: 'ghost' }
         ]
       });
     }
+    function applyQF(q, s, y) {
+      if (s !== '__all') q = q.eq('subject', s);
+      if (y === 'unknown') q = q.is('year', null);
+      else if (y !== '__all') q = q.eq('year', parseInt(y, 10));
+      if (s === '__all' && y === '__all') q = q.not('id', 'is', null);
+      return q;
+    }
+    function openBulkDelete() {
+      const counts = {};
+      allQs.forEach(q => { counts[q.subject] = (counts[q.subject] || 0) + 1; });
+      const subs = Object.keys(counts).sort();
+      if (!subs.length) return toast('No questions to delete');
+      const root = openModal({
+        title: 'Bulk delete',
+        body: `
+          <p class="txt">Pick what to remove. The count comes live from the database.</p>
+          <label class="lbl">Subject</label>
+          <select class="field" id="bd-subj"><option value="__all">All subjects</option>${subs.map(x => `<option value="${esc(x)}">${esc(x)} (${counts[x]})</option>`).join('')}</select>
+          <label class="lbl" style="margin-top:10px">Year</label>
+          <select class="field" id="bd-year"></select>
+          <div class="q-prev" id="bd-info"></div>
+          <div id="bd-type" hidden style="margin-top:12px"><label class="lbl">Type DELETE to confirm</label><input class="field" id="bd-word" type="text" autocomplete="off" /></div>
+        `,
+        actions: [
+          { label: 'Delete', style: 'danger', onClick: async () => {
+            const s = $('#bd-subj', root).value, y = $('#bd-year', root).value;
+            if (cnt < 1) return false;
+            if (s === '__all' && y === '__all' && $('#bd-word', root).value.trim().toUpperCase() !== 'DELETE') { toast('Type DELETE to confirm', true); return false; }
+            const { error, count } = await applyQF(sb.from('questions').delete({ count: 'exact' }), s, y);
+            if (error) { toast(error.message, true); return false; }
+            if (!count) { toast('Nothing was deleted. Check admin delete permission.', true); return false; }
+            toast('Deleted ' + count + ' question' + (count > 1 ? 's' : ''));
+            exitSel(); qViewMode = 'years'; loadQs();
+          } },
+          { label: 'Cancel', style: 'ghost' }
+        ]
+      });
+      const del = $('.modal-actions .danger', modalEl);
+      del.disabled = true;
+      let cnt = 0, seq = 0;
+      const info = $('#bd-info', root), ysel = $('#bd-year', root), ssel = $('#bd-subj', root);
+      const fillYears = () => {
+        const s = ssel.value, ys = {};
+        allQs.filter(q => s === '__all' || q.subject === s).forEach(q => { const k = q.year || 'unknown'; ys[k] = (ys[k] || 0) + 1; });
+        const keys = Object.keys(ys).filter(k => k !== 'unknown').sort((a, b) => b - a);
+        if (ys.unknown) keys.push('unknown');
+        ysel.innerHTML = '<option value="__all">All years</option>' + keys.map(k => `<option value="${k}">${k === 'unknown' ? 'Unknown year' : k} (${ys[k]})</option>`).join('');
+      };
+      const refresh = async () => {
+        const my = ++seq, s = ssel.value, y = ysel.value;
+        $('#bd-type', root).hidden = !(s === '__all' && y === '__all');
+        del.disabled = true; cnt = 0;
+        info.innerHTML = '<div class="ln">Counting...</div>';
+        const { count, error } = await applyQF(sb.from('questions').select('id', { count: 'exact', head: true }), s, y);
+        if (my !== seq) return;
+        if (error) { info.innerHTML = `<div class="bad">${esc(error.message)}</div>`; return; }
+        cnt = count || 0;
+        info.innerHTML = cnt ? `<div class="bad">This deletes ${cnt} question${cnt > 1 ? 's' : ''}</div>` : '<div class="ln">Nothing matches</div>';
+        del.disabled = !cnt;
+      };
+      ssel.addEventListener('change', () => { fillYears(); refresh(); });
+      ysel.addEventListener('change', refresh);
+      fillYears(); refresh();
+    }
+
+    const TRACKS = [
+      ['Sciences', ['Mathematics', 'English', 'Physics', 'Chemistry', 'Biology', 'Agricultural Science']],
+      ['Arts', ['English', 'Literature', 'Government', 'History', 'CRS / IRS', 'Fine Arts', 'French', 'Geography', 'Music', 'Yoruba', 'Igbo', 'Hausa']],
+      ['Commerce', ['Mathematics', 'English', 'Economics', 'Accounting', 'Commerce']]
+    ];
+    function openCoverage() {
+      const counts = {};
+      allQs.forEach(q => { counts[q.subject] = (counts[q.subject] || 0) + 1; });
+      const row = x => `<div class="cov-row"><span>${esc(x)}</span><b class="${counts[x] ? '' : 'zero'}">${counts[x] || 'empty'}</b></div>`;
+      const inTrack = new Set(TRACKS.flatMap(t => t[1]));
+      const other = SUBJECTS.filter(x => !inTrack.has(x));
+      const odd = Object.keys(counts).filter(x => !SUBJECTS.includes(x));
+      openModal({
+        title: 'Subject coverage',
+        body: `<p class="txt">What each student track sees in the app, and how many questions you have for it. Empty ones are what to fill next.</p>` +
+          TRACKS.map(([t, list]) => `<div class="cov-h">${t}</div>` + list.map(row).join('')).join('') +
+          `<div class="cov-h">Not in any student track yet</div>` + other.map(row).join('') +
+          (odd.length ? `<div class="cov-h">Name not recognised</div><p class="txt">Students never see these. Re-upload under the correct subject name.</p>` + odd.map(row).join('') : ''),
+        actions: [{ label: 'Close', style: 'ghost' }]
+      });
+    }
 
     $('#q-add-btn').addEventListener('click', () => openQModal(null));
-    $('#q-upload-btn').addEventListener('click', openJsonUpload);
+    $('#q-upload-btn').addEventListener('click', openBulkUpload);
+    $('#q-cov-btn').addEventListener('click', openCoverage);
+    $('#q-bulkdel-btn').addEventListener('click', openBulkDelete);
+    $('#q-sel-btn').addEventListener('click', () => { qSelMode = true; qSel.clear(); renderQs(); });
+    $('#q-sel-done').addEventListener('click', () => { exitSel(); renderQs(); });
+    $('#q-sel-all').addEventListener('click', () => {
+      qSel = qSel.size === qVisible.length ? new Set() : new Set(qVisible);
+      $$('#q-list .q-item').forEach(el => el.classList.toggle('sel', qSel.has(el.dataset.id)));
+      updateSelBar();
+    });
+    $('#q-sel-del').addEventListener('click', deleteSelected);
     let qSearchT;
     $('#q-search').addEventListener('input', e => {
       clearTimeout(qSearchT);
       qSearchT = setTimeout(() => { 
         qFilter.q = e.target.value; 
+        exitSel();
         qViewMode = 'years';
         renderQs(); 
       }, 200);
     });
-    $$('#q-diff-seg button').forEach(b => b.addEventListener('click', () => { qFilter.difficulty = b.dataset.diff; renderQs(); }));
+    $$('#q-diff-seg button').forEach(b => b.addEventListener('click', () => { qFilter.difficulty = b.dataset.diff; exitSel(); renderQs(); }));
 
     /* --- Console + editors --- */
     function parseQs(txt) {
       txt = (txt || '').trim(); if (!txt) return null;
-      let a; try { a = JSON.parse(txt); } catch (e) { throw new Error('Questions: invalid JSON'); }
-      if (!Array.isArray(a) || !a.length) throw new Error('Questions must be a JSON array');
-      if (a.length > 10) throw new Error('Max 10 questions');
-      a.forEach((q, i) => {
-        if (!q.question || !q.option_a || !q.option_b || !['a','b','c','d'].includes(String(q.answer).toLowerCase())) throw new Error('Question ' + (i + 1) + ' needs question, option_a, option_b, answer (a-d)');
-        q.answer = String(q.answer).toLowerCase();
-      });
-      return a;
+      const { qs, errs } = parseQInput(txt, { loose: true });
+      if (errs.length) throw new Error('Question ' + errs[0].n + ': ' + errs[0].msg);
+      if (!qs.length) throw new Error('No questions found');
+      if (qs.length > 10) throw new Error('Max 10 questions');
+      return qs.map(q => ({ question: q.question, option_a: q.option_a, option_b: q.option_b, option_c: q.option_c, option_d: q.option_d, answer: q.answer, explanation: q.explanation || '' }));
     }
     let annNotify = false;
     $$('#ann-mode button').forEach(b => b.addEventListener('click', () => {
@@ -1239,25 +1675,27 @@
     pickAll();
     window.editItem = (kind, id) => {
       const cfg = {
-        note: { table: 'daily_notes', rows: () => allNotes, reload: loadNotes, f: [['title','Title'],['subject','Subject'],['content','Markdown','ta'],['short_test_count','Short test Qs','num'],['questions','Questions JSON (max 10)','json']] },
+        note: { table: 'daily_notes', rows: () => allNotes, reload: loadNotes, f: [['title','Title'],['subject','Subject'],['content','Markdown','ta'],['short_test_count','Short test Qs','num'],['questions','Questions (max 10)','json']] },
         ch:   { table: 'challenges', rows: () => allChallenges, reload: loadChallenges, f: [['title','Title'],['description','Description'],['target','Target','num'],['reward','Reward'],['type','Type (daily or weekly)'],['metric','Counts (tests, notes or both)']] },
         ann:  { table: 'announcements', rows: () => allAnns, reload: loadAnns, f: [['title','Title'],['body','Body','ta']] }
       }[kind];
       const row = cfg.rows().find(r => String(r.id) === String(id));
       if (!row) return;
+      const hasCtl = ('expires_at' in row);
       const root = openModal({
         title: 'Edit',
         body: cfg.f.map(([k, l, t]) => `<label class="lbl" style="margin-top:8px">${l}</label>` + (t === 'json'
-          ? `<textarea class="field" data-k="${k}" data-j="1" style="min-height:140px;font-family:monospace">${esc(row[k] ? JSON.stringify(row[k], null, 1) : '')}</textarea>`
+          ? `<textarea class="field" data-k="${k}" data-j="1" style="min-height:140px;font-family:monospace">${esc(row[k] ? qsToText(row[k]) : '')}</textarea>`
           : t === 'ta'
           ? `<textarea class="field" data-k="${k}" style="min-height:140px">${esc(row[k] || '')}</textarea>`
-          : `<input class="field" data-k="${k}" type="${t === 'num' ? 'number' : 'text'}" value="${esc(row[k] ?? '')}" />`)).join(''),
+          : `<input class="field" data-k="${k}" type="${t === 'num' ? 'number' : 'text'}" value="${esc(row[k] ?? '')}" />`)).join('') + (hasCtl ? `<div class="stack" style="margin-top:10px">${ctlHtml('ed', { aud: kind !== 'ch', audience: row.audience || 'all', keep: row.expires_at || null })}</div>` : ''),
         actions: [
           { label: 'Save', style: 'primary', onClick: async () => {
             const p = {};
             try {
-              $$('[data-k]', root).forEach(el => { p[el.dataset.k] = el.dataset.j ? parseQs(el.value) : el.type === 'number' ? (parseInt(el.value) || 0) : el.value; });
+              $$('[data-k]', root).forEach(el => { p[el.dataset.k] = el.dataset.j ? (el.value === el.defaultValue ? (row[el.dataset.k] ?? null) : parseQs(el.value)) : el.type === 'number' ? (parseInt(el.value) || 0) : el.value; });
               if (p.questions) p.short_test_count = p.questions.length;
+              if (hasCtl) Object.assign(p, ctlRead('ed', root));
             } catch (e) { toast(e.message, true); return false; }
             const { error } = await sb.from(cfg.table).update(p).eq('id', id);
             if (error) { toast(error.message, true); return false; }
@@ -1266,6 +1704,7 @@
           { label: 'Cancel', style: 'ghost' }
         ]
       });
+      if (hasCtl) ctlWire('ed', root);
     };
     function syncCs() {
       const u = users.find(x => x.id === $('#cs-user').value) || users[0];
@@ -1289,21 +1728,141 @@
       chMetric = b.dataset.m;
       $$('#ch-metric button').forEach(x => x.classList.toggle('on', x === b));
     }));
-    async function loadPlan() {
-      const { data } = await sb.from('app_settings').select('*').in('key', ['daily_plan', 'channel_link']);
-      const m = {}; (data || []).forEach(r => { m[r.key] = r.value; });
-      let items = []; try { items = JSON.parse(m.daily_plan || '[]'); } catch (e) {}
-      $('#plan-text').value = items.join('\n'); $('#plan-link').value = m.channel_link || '';
+    const PLAN_KEYS = ['daily_plan', 'daily_plan_sciences', 'daily_plan_arts', 'daily_plan_commerce'];
+    const planKey = a => a === 'all' ? 'daily_plan' : 'daily_plan_' + a;
+    let planCache = {};
+    function fillPlan() {
+      const a = $('#plan-aud').value, k = planKey(a);
+      let items = []; try { items = JSON.parse(planCache[k] || '[]'); } catch (e) {}
+      $('#plan-text').value = items.join('\n');
+      const e = planCache[k + '_exp'];
+      ctlMount('plan-ctl', 'plan', { keep: e === undefined ? undefined : (e || null) });
+      $('#plan-note').textContent = a === 'all'
+        ? 'Shown to every student who has no plan of their own course.'
+        : 'Students on ' + a.charAt(0).toUpperCase() + a.slice(1) + ' see this instead of the Everyone plan.';
     }
+    async function loadPlan() {
+      const { data } = await sb.from('app_settings').select('*').in('key', PLAN_KEYS.concat(PLAN_KEYS.map(k => k + '_exp'), ['channel_link']));
+      planCache = {}; (data || []).forEach(r => { planCache[r.key] = r.value; });
+      $('#plan-link').value = planCache.channel_link || '';
+      fillPlan();
+    }
+    $('#plan-aud').addEventListener('change', fillPlan);
     $('#plan-save').onclick = async () => {
       const items = $('#plan-text').value.split('\n').map(x => x.trim()).filter(Boolean);
       if (items.length > 8) return toast('Max 8 tasks', true);
       if (items.some(x => x.length > 60)) return toast('Keep each task under 60 characters', true);
       const link = $('#plan-link').value.trim();
       if (link && !/^https:\/\//i.test(link)) return toast('Channel link must start with https://', true);
-      const { error } = await sb.from('app_settings').upsert([{ key: 'daily_plan', value: JSON.stringify(items) }, { key: 'channel_link', value: link }], { onConflict: 'key' });
+      const k = planKey($('#plan-aud').value);
+      let c; try { c = ctlRead('plan'); } catch (e) { return toast(e.message, true); }
+      const rows = [{ key: k, value: JSON.stringify(items) }, { key: 'channel_link', value: link }];
+      if ('expires_at' in c) rows.push({ key: k + '_exp', value: c.expires_at || '' });
+      const { error } = await sb.from('app_settings').upsert(rows, { onConflict: 'key' });
       if (error) return fail(error);
       toast('Plan saved');
+      loadPlan();
+    };
+
+    /* --- Audience + expiry controls (notes, announcements, challenges, plan) --- */
+    const AUD = [['all', 'Everyone'], ['sciences', 'Sciences'], ['arts', 'Arts'], ['commerce', 'Commerce']];
+    const EXPS = [['24', '24 hours'], ['72', '3 days'], ['168', '7 days'], ['720', '30 days'], ['never', 'Never'], ['custom', 'Custom...']];
+    function spanTxt(ms) {
+      const m = Math.round(ms / 60000);
+      if (m < 60) return Math.max(m, 1) + ' min';
+      const h = Math.round(m / 60);
+      return h < 48 ? h + ' h' : Math.round(h / 24) + ' days';
+    }
+    function expTxt(iso) {
+      if (!iso) return 'never';
+      const ms = new Date(iso).getTime() - Date.now();
+      return ms > 0 ? 'in ' + spanTxt(ms) : spanTxt(-ms) + ' ago';
+    }
+    const isExp = r => !!(r.expires_at && new Date(r.expires_at).getTime() <= Date.now());
+    const lifeTag = (r, live) => `<em class="tag ${isExp(r) ? '' : (r.active ? 't-new' : '')}">${isExp(r) ? 'Expired' : (r.active ? live : 'Hidden')}</em>`;
+    const audTag = r => (r.audience && r.audience !== 'all') ? `<em class="tag">${esc(r.audience.charAt(0).toUpperCase() + r.audience.slice(1))}</em>` : '';
+    const lifeLine = r => ('expires_at' in r) ? `<p style="font-size:.78rem;color:var(--muted);margin-top:6px">${isExp(r) ? 'Expired ' + expTxt(r.expires_at) : (r.expires_at ? 'Disappears ' + expTxt(r.expires_at) : 'Never disappears')}</p>` : '';
+    const sqlHint = e => (/audience|expires_at|last_seen|admin_activity|daily_plan_for/i.test((e && e.message) || '') ? new Error('Run stride-v6.sql in Supabase first, then try again.') : e);
+
+    function ctlHtml(id, o) {
+      o = o || {};
+      const keep = o.keep !== undefined ? `<option value="keep">Keep current (${esc(expTxt(o.keep))})</option>` : '';
+      return (o.aud ? `<label class="lbl">Show to</label><select class="field" id="${id}-aud">${AUD.map(([v, l]) => `<option value="${v}" ${v === (o.audience || 'all') ? 'selected' : ''}>${l}</option>`).join('')}</select>` : '') +
+        `<label class="lbl" style="margin-top:8px">Disappears after</label>
+         <select class="field" id="${id}-exp">${keep}${EXPS.map(([v, l]) => `<option value="${v}" ${o.keep === undefined && v === (o.defExp || '24') ? 'selected' : ''}>${l}</option>`).join('')}</select>
+         <div class="two-col" id="${id}-cust" style="display:none;margin-top:8px"><input class="field" id="${id}-cn" type="number" min="1" value="2" /><select class="field" id="${id}-cu"><option value="h">Hours</option><option value="d" selected>Days</option></select></div>`;
+    }
+    function ctlWire(id, root) {
+      const q = s => $(s, root || document);
+      const sel = q('#' + id + '-exp');
+      sel.addEventListener('change', () => { q('#' + id + '-cust').style.display = sel.value === 'custom' ? 'grid' : 'none'; });
+    }
+    function ctlMount(boxId, id, o) {
+      $('#' + boxId).innerHTML = ctlHtml(id, o);
+      ctlWire(id);
+    }
+    function ctlRead(id, root) {
+      const q = s => $(s, root || document);
+      const out = {};
+      const a = q('#' + id + '-aud'); if (a) out.audience = a.value;
+      const v = q('#' + id + '-exp').value;
+      if (v === 'keep') return out;
+      if (v === 'never') { out.expires_at = null; return out; }
+      let hrs = parseInt(v, 10);
+      if (v === 'custom') {
+        const n = parseFloat(q('#' + id + '-cn').value);
+        if (!(n > 0)) throw new Error('Enter how long it should stay');
+        hrs = q('#' + id + '-cu').value === 'd' ? n * 24 : n;
+      }
+      out.expires_at = new Date(Date.now() + hrs * 36e5).toISOString();
+      return out;
+    }
+    ctlMount('note-ctl', 'note', { aud: true });
+    ctlMount('ann-ctl', 'ann', { aud: true });
+    ctlMount('ch-ctl', 'ch', { defExp: 'never' });
+
+    /* --- Live console --- */
+    let liveTimer = null;
+    function renderLive() {
+      const g = $('#live-grid');
+      if (!g) return;
+      const a = (act && act.active) || {};
+      const todayFrom = dayKey(new Date());
+      const td = ((act && act.days) || []).find(d => d.d === todayFrom) || { tests: 0, qs: 0 };
+      const newToday = users.filter(u => new Date(u.created_at).getTime() >= periodStart('today').getTime()).length;
+      const cell = (k, v) => `<div class="stat"><div class="k">${k}</div><div class="v">${fmtN(v)}</div></div>`;
+      g.innerHTML = act
+        ? cell('Online now', a.online) + cell('Active today', a.today) + cell('New today', newToday) + cell('Tests today', td.tests) + cell('Questions today', td.qs) + cell('Pending payments', stats ? stats.pending_payments : 0)
+        : '<p class="empty" style="grid-column:1 / -1">Live stats need stride-v6.sql. Run it in Supabase, then refresh.</p>';
+      const stamp = $('#live-stamp'); if (stamp) stamp.textContent = 'updated ' + new Date().toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const days = [];
+      for (let i = 13; i >= 0; i--) { const d = periodStart('today'); d.setDate(d.getDate() - i); days.push(d); }
+      const map = {}; ((act && act.days) || []).forEach(d => { map[d.d] = Number(d.tests); });
+      $('#live-bars').innerHTML = chartHtml(days.map(d => ({ lab: d.toLocaleDateString(undefined, { weekday: 'narrow' }), tip: d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }), n: map[dayKey(d)] || 0 })));
+      $('#live-subj').innerHTML = bars((act && act.subjects) || [], 'subject', '');
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        $$('#live-subj [data-w]').forEach(el => el.style.width = el.dataset.w + '%');
+        $$('#live-bars [data-h]').forEach(el => el.style.height = el.dataset.h + '%');
+      }));
+    }
+    async function pollLive() {
+      if (document.hidden || ui.cTab !== 'console' || !$('#content').classList.contains('active')) return;
+      await loadActivity(false);
+      renderLive();
+    }
+    function startLive() { stopLive(); liveTimer = setInterval(pollLive, 30000); }
+    function stopLive() { if (liveTimer) { clearInterval(liveTimer); liveTimer = null; } }
+    $('#qa-refresh').onclick = async () => { await reloadCore(); renderLive(); };
+    $('#qa-clean').onclick = () => runCleanup(true);
+    $('#qa-csv').onclick = () => {
+      const cols = ['name', 'email', 'course', 'school', 'plan', 'plan_expires_at', 'created_at', 'last_sign_in_at', 'tests_count', 'avg_pct', 'streak_count'];
+      const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+      const csv = [cols.join(',')].concat(users.map(u => cols.map(c => q(u[c])).join(','))).join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = 'stride-users-' + dayKey(new Date()) + '.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      toast('Exported ' + users.length + ' users');
     };
 
     /* --- Content Logic --- */
@@ -1314,7 +1873,7 @@
       if (ui.cTab === 'notes') loadNotes();
       if (ui.cTab === 'challenges') loadChallenges();
       if (ui.cTab === 'announce') loadAnns();
-      if (ui.cTab === 'console') fillConsole();
+      if (ui.cTab === 'console') { fillConsole(); renderLive(); startLive(); } else stopLive();
       if (ui.cTab === 'plan') loadPlan();
     }));
 
@@ -1328,8 +1887,8 @@
         if (!allNotes.length) { root.innerHTML = '<p class="empty">No notes yet.</p>'; return; }
         root.innerHTML = allNotes.map(n => `
           <div class="ann">
-            <div class="ann-top"><h4>${esc(n.title)}</h4><em class="tag ${n.active ? 't-new' : ''}">${n.active ? 'Live' : 'Hidden'}</em></div>
-            <p>${esc(n.content)}</p>
+            <div class="ann-top"><h4>${esc(n.title)}</h4><span style="display:flex;gap:6px;align-items:center">${audTag(n)}${lifeTag(n, 'Live')}</span></div>
+            <p>${esc(n.content)}</p>${lifeLine(n)}
             <div class="ann-actions">
               <button class="mini" onclick="toggleNote('${n.id}', ${n.active})">${n.active ? 'Hide' : 'Show'}</button>
               <button class="mini" onclick="editItem('note','${n.id}')">Edit</button>
@@ -1358,9 +1917,10 @@
       try { questions = parseQs($('#note-json').value); } catch (e) { return toast(e.message, true); }
       if (questions) short_test_count = questions.length;
       if (!title || !content) return toast('Title and content required', true);
+      let c; try { c = ctlRead('note'); } catch (e) { return toast(e.message, true); }
 
-      const { error } = await sb.from('daily_notes').insert([{ title, content, subject, short_test_count, questions, active: true }]);
-      if (error) return fail(error);
+      const { error } = await sb.from('daily_notes').insert([{ title, content, subject, short_test_count, questions, active: true, audience: c.audience, expires_at: c.expires_at }]);
+      if (error) return fail(sqlHint(error));
       
       $('#note-title').value = ''; $('#note-content').value = ''; $('#note-subject').value = ''; $('#note-short').value = '0'; $('#note-json').value = '';
       toast('Note saved');
@@ -1377,8 +1937,8 @@
         if (!allChallenges.length) { root.innerHTML = '<p class="empty">No challenges yet.</p>'; return; }
         root.innerHTML = allChallenges.map(c => `
           <div class="ann">
-            <div class="ann-top"><h4>${esc(c.title)}</h4><em class="tag ${c.active ? 't-new' : ''}">${c.active ? 'Active' : 'Hidden'}</em></div>
-            <p>${esc(c.description || '')} (Target: ${c.target})</p>
+            <div class="ann-top"><h4>${esc(c.title)}</h4>${lifeTag(c, 'Active')}</div>
+            <p>${esc(c.description || '')} (Target: ${c.target})</p>${lifeLine(c)}
             <div class="ann-actions">
               <button class="mini" onclick="toggleCh('${c.id}', ${c.active})">${c.active ? 'Hide' : 'Show'}</button>
               <button class="mini" onclick="editItem('ch','${c.id}')">Edit</button>
@@ -1410,8 +1970,9 @@
       const reward = $('#ch-reward').value.trim();
       if (!title) return toast('Title required', true);
 
-      const { error } = await sb.from('challenges').insert([{ title, description, target, reward, type: ui.chType, metric: chMetric, active: true }]);
-      if (error) return fail(error);
+      let c; try { c = ctlRead('ch'); } catch (e) { return toast(e.message, true); }
+      const { error } = await sb.from('challenges').insert([{ title, description, target, reward, type: ui.chType, metric: chMetric, active: true, expires_at: c.expires_at }]);
+      if (error) return fail(sqlHint(error));
 
       $('#ch-title').value = ''; $('#ch-desc').value = ''; $('#ch-target').value = '3'; $('#ch-reward').value = '';
       toast('Challenge created');
@@ -1428,8 +1989,8 @@
         if (!allAnns.length) { root.innerHTML = '<p class="empty">No announcements yet.</p>'; return; }
         root.innerHTML = allAnns.map(a => `
           <div class="ann">
-            <div class="ann-top"><h4>${esc(a.title)}</h4><em class="tag ${a.active ? 't-new' : ''}">${a.active ? 'Active' : 'Hidden'}</em>${a.notify ? '<em class="tag t-prem">Alert</em>' : ''}</div>
-            <p>${esc(a.body)}</p>
+            <div class="ann-top"><h4>${esc(a.title)}</h4><span style="display:flex;gap:6px;align-items:center">${audTag(a)}${lifeTag(a, 'Active')}${a.notify ? '<em class="tag t-prem">Alert</em>' : ''}</span></div>
+            <p>${esc(a.body)}</p>${lifeLine(a)}
             <div class="ann-actions">
               <button class="mini" onclick="toggleAnn('${a.id}', ${a.active})">${a.active ? 'Hide' : 'Show'}</button>
               <button class="mini" onclick="toggleAnnNotify('${a.id}', ${!!a.notify})">${a.notify ? 'Alert off' : 'Alert on'}</button>
@@ -1454,8 +2015,9 @@
       const title = $('#ann-title').value.trim();
       const body = $('#ann-body').value.trim();
       if (!title || !body) return toast('Title and body required', true);
-      const { error } = await sb.from('announcements').insert([{ title, body, active: true, notify: annNotify }]);
-      if (error) return fail(error);
+      let c; try { c = ctlRead('ann'); } catch (e) { return toast(e.message, true); }
+      const { error } = await sb.from('announcements').insert([{ title, body, active: true, notify: annNotify, audience: c.audience, expires_at: c.expires_at }]);
+      if (error) return fail(sqlHint(error));
       $('#ann-title').value = ''; $('#ann-body').value = '';
       toast('Announcement published');
       loadAnns();
@@ -1490,7 +2052,7 @@
         ['Plan', prem ? 'Premium · ' + (u.plan_expires_at ? 'until ' + fmtDate(u.plan_expires_at) : 'lifetime') : 'Free'],
         ...(prem ? [] : [['Trial', trialLine(u)]]),
         ['Status', susp ? 'Suspended · ' + untilTxt(u.suspended_until) : 'Active'],
-        ['Last sign-in', ago(u.last_sign_in_at)],
+        ['Last active', lastActive(u) ? ago(new Date(lastActive(u)).toISOString()) : '—'],
         ['Joined', fmtDate(u.created_at)],
         ['ID', u.id.slice(0, 8) + '…']
       ];
@@ -1501,7 +2063,7 @@
       items.push(menuItem('copy-email', 'mail', 'Copy email', esc(u.email)));
       items.push(menuItem('copy-id', 'fingerprint', 'Copy user ID', 'For support lookups'));
       
-      if (consoleMode) {
+      {
         items.push(menuItem('edit-stats', 'settings-2', 'Edit Stats (Console)', 'Manually tweak streak and averages', 'gold'));
       }
 
@@ -1754,7 +2316,11 @@
         const r = await rpc('admin_cleanup');
         const list = (await rpc('admin_list_payments', { flt: 'all' })) || [];
         const n = await pruneReceipts(list);
-        if (manual) toast(`Removed ${r.announcements} announcements, ${r.logs} logs, ${n} receipts`);
+        const cut = new Date(Date.now() - DAY).toISOString();
+        const da = await sb.from('announcements').delete({ count: 'exact' }).lt('expires_at', cut);
+        const dn = await sb.from('daily_notes').delete({ count: 'exact' }).lt('expires_at', cut);
+        const extraA = da.error ? 0 : (da.count || 0), extraN = dn.error ? 0 : (dn.count || 0);
+        if (manual) toast(`Removed ${(r.announcements || 0) + extraA} announcements, ${extraN} notes, ${r.logs} logs, ${n} receipts`);
       } catch (e) { if (manual) fail(e); }
     }
 
@@ -1891,7 +2457,7 @@
     }
     $$('.nav-item').forEach(b => b.addEventListener('click', () => goTo(b.dataset.target)));
 
-    function renderAll() { renderOverview(); renderUsers(); renderAdmins(); setBadge(stats ? stats.pending_payments : 0); icons(); }
+    function renderAll() { renderOverview(); renderUsers(); renderAdmins(); renderLive(); setBadge(stats ? stats.pending_payments : 0); icons(); }
 
     let searchT;
     $('#user-search').addEventListener('input', e => { clearTimeout(searchT); searchT = setTimeout(() => { ui.q = e.target.value; ui.shown = 40; renderUsers(); }, 160); });

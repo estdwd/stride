@@ -591,7 +591,7 @@
       <header class="top-header"><h1>Practice</h1></header>
 
       <div class="panel stagger" style="--i:0">
-        <div class="panel-head"><h3>Subjects</h3><small id="course-label">Your course</small></div>
+        <div class="panel-head"><h3>Subjects</h3><span style="display:flex;align-items:center;gap:12px"><small id="course-label">Your course</small><button type="button" id="all-subj-btn" style="background:none;border:0;padding:0;color:var(--orange);font:inherit;font-size:.78rem;font-weight:600;cursor:pointer">Show all</button></span></div>
         <div class="subject-grid" id="subject-grid"></div>
       </div>
 
@@ -1106,12 +1106,32 @@
     }
 
     async function loadDynamicContent() {
-      // Fetch active note
-      const { data: notes } = await supabase.from('daily_notes').select('*').eq('active', true).order('created_at', { ascending: false }).limit(20);
-      dailyNotes = (notes || []).map(n => (Array.isArray(n.questions) && n.questions.length) ? { ...n, short_test_count: n.questions.length } : n);
+      const nowIso = new Date().toISOString();
+      const dayAgo = new Date(Date.now() - 864e5).toISOString();
+      const aud = (() => { const k = String((dbProfile && dbProfile.course) || 'Sciences').toLowerCase().split(/[\s,/-]+/)[0]; return k === 'commercial' ? 'commerce' : k; })();
+      // Live items only: not expired, and meant for everyone or for this student's course.
+      const live = async (table, withAud, asc, limit, legacyDay) => {
+        let q = supabase.from(table).select('*').eq('active', true).or('expires_at.is.null,expires_at.gt.' + nowIso);
+        if (withAud) q = q.in('audience', ['all', aud]);
+        q = q.order('created_at', { ascending: asc });
+        let r = await (limit ? q.limit(limit) : q);
+        if (r.error) { // new columns not added yet (stride-v6.sql not run): old behaviour
+          let o = supabase.from(table).select('*').eq('active', true);
+          if (legacyDay) o = o.gte('created_at', dayAgo);
+          o = o.order('created_at', { ascending: asc });
+          r = await (limit ? o.limit(limit) : o);
+        }
+        return r.data || [];
+      };
+
+      const notes = await live('daily_notes', true, false, 20, true);
+      dailyNotes = notes.map(n => (Array.isArray(n.questions) && n.questions.length) ? { ...n, short_test_count: n.questions.length } : n);
       dailyNote = dailyNotes[0] || null;
       try {
-        const { data: plan } = await supabase.rpc('daily_plan');
+        let plan = null;
+        const r1 = await supabase.rpc('daily_plan_for', { p_course: aud });
+        if (!r1.error) plan = r1.data;
+        else { const r2 = await supabase.rpc('daily_plan'); plan = r2.data; }
         planItems = Array.isArray(plan) ? plan : [];
         const { data: link } = await supabase.rpc('public_setting', { p_key: 'channel_link' });
         channelLink = link || '';
@@ -1119,8 +1139,7 @@
       } catch (e) {}
 
       // Fetch challenges
-      const { data: chs } = await supabase.from('challenges').select('*').eq('active', true);
-      challenges = chs || [];
+      challenges = await live('challenges', false, true, 0, false);
       const dailies = challenges.filter(c => c.type === 'daily');
       if (dailies.length > 1) {
         const pick = dailies[Math.floor(Date.now() / 864e5) % dailies.length];
@@ -1134,9 +1153,19 @@
       }
 
       // Fetch announcements
-      const { data: anns } = await supabase.from('announcements').select('*').eq('active', true).order('created_at', { ascending: false });
-      announcements = anns || [];
+      announcements = await live('announcements', true, false, 0, true);
     }
+
+    // Tell the admin console this student is around (at most once every 10 minutes).
+    function touchSeen() {
+      try {
+        const last = +localStorage.getItem('stride_seen') || 0;
+        if (Date.now() - last < 6e5) return;
+        localStorage.setItem('stride_seen', String(Date.now()));
+        supabase.rpc('touch_seen').then(() => {}, () => {});
+      } catch (e) {}
+    }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && currentUser) touchSeen(); });
 
     async function initApp() {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -1172,6 +1201,7 @@
       const suspended = dbProfile.status === 'suspended' &&
         (!dbProfile.suspended_until || new Date(dbProfile.suspended_until) > new Date());
       if (suspended) { showSuspended(dbProfile); return; }
+      touchSeen();
 
       // Streak Logic
       const dayStr = d => d.toLocaleDateString('en-CA');
@@ -1596,6 +1626,7 @@
       sciences: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Biology', 'Agricultural Science'],
       arts: ['English', 'Literature', 'Government', 'History', 'CRS / IRS', 'Fine Arts', 'French', 'Geography', 'Music', 'Yoruba', 'Igbo', 'Hausa'],
       commercial: ['Mathematics', 'English', 'Economics', 'Accounting', 'Commerce'],
+      commerce: ['Mathematics', 'English', 'Economics', 'Accounting', 'Commerce'],
       engineering: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Further Maths', 'Technical Drawing'],
       medicine: ['Biology', 'Chemistry', 'Physics', 'English', 'Mathematics'],
       law: ['English', 'Literature', 'Government', 'History', 'CRS / IRS'],
@@ -1606,15 +1637,26 @@
     const courseKey = userCourse.toLowerCase().split(/[\s,/-]+/)[0];
     const subjects = SUBJECT_MAP[courseKey] || SUBJECT_MAP['sciences'];
 
+    let showAllSubj = false;
+    const allSubjectList = () => {
+      const rest = [...new Set([...Object.values(SUBJECT_MAP).flat(), ...availableSubjects])].filter(x => !subjects.includes(x)).sort();
+      return [...subjects, ...rest];
+    };
     const practice = { selected: [], count: 20, diff: 'medium', mode: 'practice', time: 15, year: 'all' };
     const Q_STEPS = [5, 10, 15, 20, 30, 40, 50];
+    $('#all-subj-btn').addEventListener('click', () => {
+      showAllSubj = !showAllSubj;
+      if (!showAllSubj) practice.selected = practice.selected.filter(x => subjects.includes(x));
+      renderPractice();
+    });
 
     function renderPractice() {
       $('#course-label').textContent = userCourse;
       const grid = $('#subject-grid');
       grid.innerHTML = '';
       
-      subjects.forEach(s => {
+      $('#all-subj-btn').textContent = showAllSubj ? 'Show mine' : 'Show all';
+      (showAllSubj ? allSubjectList() : subjects).forEach(s => {
         const hasQ = availableSubjects.includes(s);
         const b = document.createElement('button');
         let cls = 'subject';
