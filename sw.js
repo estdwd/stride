@@ -1,5 +1,5 @@
 /* Stride service worker */
-const VERSION = 'stride-v2';
+const VERSION = 'stride-v3';
 
 // Only list files that ACTUALLY exist. Anything missing here breaks install.
 const SHELL = [

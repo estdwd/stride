@@ -753,6 +753,11 @@
 
       <div class="panel stagger" style="--i:1">
         <div class="menu">
+          <button class="menu-item" id="install-btn" style="display:none;">
+            <div class="menu-ic"><i data-lucide="download"></i></div>
+            <div class="menu-body"><h4>Install Stride</h4><p>Add to your home screen</p></div>
+            <span class="chev"><i data-lucide="chevron-right"></i></span>
+          </button>
           <button class="menu-item" id="admin-btn">
             <div class="menu-ic"><i data-lucide="shield"></i></div>
             <div class="menu-body"><h4>Admin panel</h4><p>Manage the platform</p></div>
@@ -1249,6 +1254,7 @@
       html.style.visibility = 'visible';
       renderAll();
       icons();
+      setupInstallPrompt();
     }
 
     function toLogin() {
@@ -1719,17 +1725,26 @@
     const SUBJECT_MAP = {
       sciences: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Biology', 'Agricultural Science'],
       arts: ['English', 'Literature', 'Government', 'History', 'CRS / IRS', 'Fine Arts', 'French', 'Geography', 'Music', 'Yoruba', 'Igbo', 'Hausa'],
-      commercial: ['Mathematics', 'English', 'Economics', 'Accounting', 'Commerce'],
       commerce: ['Mathematics', 'English', 'Economics', 'Accounting', 'Commerce'],
+      commercial: ['Mathematics', 'English', 'Economics', 'Accounting', 'Commerce'],
       engineering: ['Mathematics', 'English', 'Physics', 'Chemistry', 'Further Maths', 'Technical Drawing'],
       medicine: ['Biology', 'Chemistry', 'Physics', 'English', 'Mathematics'],
       law: ['English', 'Literature', 'Government', 'History', 'CRS / IRS'],
       technology: ['Mathematics', 'English', 'Physics', 'Computer Studies', 'Further Maths']
     };
 
+    let courseKey = 'sciences';
+    if (dbProfile.course) {
+      const c = dbProfile.course.toLowerCase();
+      if (c.includes('art')) courseKey = 'arts';
+      else if (c.includes('comm')) courseKey = 'commerce';
+      else if (c.includes('sci')) courseKey = 'sciences';
+      else courseKey = c.split(/[\s,/-]+/)[0];
+    }
+    if (!SUBJECT_MAP[courseKey]) courseKey = 'sciences';
+
     const userCourse = dbProfile.course || 'Sciences';
-    const courseKey = userCourse.toLowerCase().split(/[\s,/-]+/)[0];
-    const subjects = SUBJECT_MAP[courseKey] || SUBJECT_MAP['sciences'];
+    const subjects = SUBJECT_MAP[courseKey];
 
     let showAllSubj = false;
     const allSubjectList = () => {
@@ -2115,6 +2130,48 @@
       toLogin();
     });
 
+    // ---------- PWA Install Logic ----------
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      $('#install-btn').style.display = 'flex';
+    });
+    
+    function setupInstallPrompt() {
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+      
+      if (isIOS && !isStandalone) {
+        $('#install-btn').style.display = 'flex';
+      }
+
+      $('#install-btn').addEventListener('click', async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            $('#install-btn').style.display = 'none';
+          }
+          deferredPrompt = null;
+        } else if (isIOS) {
+          openModal({
+            title: 'Install on iPhone/iPad',
+            body: `
+              <p style="margin-bottom:16px">Apple requires you to add the app to your Home Screen manually. It's easy:</p>
+              <ol style="margin-left:20px; line-height:1.6; color:#d1d1d1">
+                <li>Tap the <b>Share</b> button <svg style="display:inline;width:16px;height:16px;vertical-align:text-bottom;margin-bottom:2px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg> at the bottom of Safari.</li>
+                <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
+                <li>Tap <b>Add</b> in the top right corner.</li>
+              </ol>
+            `,
+            actions: [{ label: 'Got it', style: 'primary' }]
+          });
+        } else {
+          toast('To install, open this page in Chrome, Edge, or Samsung Internet and use the browser menu.');
+        }
+      });
+    }
 
     // ---------- Notifications ----------
     // Optional real background push (works even when the app is closed): create a free
