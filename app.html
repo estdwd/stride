@@ -588,10 +588,10 @@
           </div>
         </article>
 
-        <article class="card wide c-green stagger" data-id="mock" data-cat="exams" style="--i:6">
+        <article class="card wide c-green stagger" data-id="mock" data-cat="exams" style="--i:6" onclick="startFullMock()">
           <div class="badge"><i data-lucide="target"></i></div>
           <div class="text">
-            <p class="eyebrow-dark">40 Qs &bull; 30 Mins</p>
+            <p class="eyebrow-dark">80 Qs &bull; 40 Mins</p>
             <h3>Take a Full Mock</h3>
           </div>
         </article>
@@ -637,7 +637,7 @@
           </div>
         </div>
 
-        <div class="field-row">
+        <div class="field-row" id="q-count-row">
           <div class="field-label">Questions<small>per session</small></div>
           <div class="stepper">
             <button id="q-minus" aria-label="Fewer questions"><i data-lucide="minus"></i></button>
@@ -646,7 +646,7 @@
           </div>
         </div>
 
-        <div class="field-row" style="flex-direction:column;align-items:stretch;gap:10px">
+        <div class="field-row" id="diff-row" style="flex-direction:column;align-items:stretch;gap:10px">
           <div class="field-label">Difficulty</div>
           <div class="seg" id="diff-seg">
             <button data-diff="easy">Easy</button>
@@ -669,6 +669,10 @@
           <div class="seg" id="time-seg" style="grid-template-columns: repeat(4, 1fr);">
             <button data-time="5">5m</button><button data-time="10">10m</button><button data-time="15" class="on">15m</button><button data-time="30">30m</button><button data-time="45">45m</button><button data-time="60">60m</button><button data-time="90">90m</button><button data-time="120">120m</button>
           </div>
+        </div>
+
+        <div class="field-row" id="mock-notice" style="display:none; padding:14px; background:rgba(255,255,255,0.05); border-radius:16px; font-size:.85rem; color:var(--muted); line-height:1.4; text-align:center;">
+          Mock is a standard JAMB exam: 120 questions across 4 core subjects, 1 hour. Only the year is configurable.
         </div>
       </div>
 
@@ -811,7 +815,6 @@
     </div>
   </div>
 
-  <!-- UPDATED DOCK WITH NOTES -->
   <nav class="dock" aria-label="Main">
     <div class="dock-inner">
       <button class="nav-item active" data-target="home" aria-label="Home"><i data-lucide="home"></i></button>
@@ -1462,10 +1465,8 @@
       // Recommended (Shuffle real subject)
       if (availableSubjects.length > 0) {
         const rndSub = availableSubjects[Math.floor(Math.random() * availableSubjects.length)];
-        const rndTopics = ['Mechanics', 'Algebra', 'Organic Chemistry', 'Comprehension', 'Economics'];
-        const rndTopic = rndTopics[Math.floor(Math.random() * rndTopics.length)];
-        $('#rec-eyebrow').textContent = rndSub;
-        $('#rec-title').textContent = `Study: ${rndTopic}`;
+        $('#rec-eyebrow').textContent = 'Recommended for you';
+        $('#rec-title').textContent = `Study: ${rndSub}`;
       }
 
       const saved = dbProfile.saved_cards || [];
@@ -1653,8 +1654,36 @@
 
     window.startRecommended = () => {
       if (!availableSubjects.length) return toast('No subjects available.');
+      
       const rndSub = availableSubjects[Math.floor(Math.random() * availableSubjects.length)];
-      startTest({ subjects: [rndSub], year: 'all', count: 10, difficulty: 'medium', mode: 'practice', time: 0 });
+      
+      practice.mode = 'practice';
+      practice.selected = [rndSub];
+      practice.year = 'all';
+      practice.count = 20;
+      practice.diff = 'medium';
+      practice.time = 0;
+      
+      $$('button', $('#mode-seg')).forEach(x => x.classList.toggle('on', x.dataset.mode === 'practice'));
+      $$('button', $('#diff-seg')).forEach(x => x.classList.toggle('on', x.dataset.diff === 'medium'));
+      $('#q-val').textContent = '20';
+      
+      renderPractice();
+      goTo('practice');
+      toast(`Study: ${rndSub}`);
+    };
+
+    window.startFullMock = () => {
+      const coreSubjects = subjects.slice(0, 4);
+      if (coreSubjects.length < 4) return toast('Your course needs at least 4 subjects for a mock.');
+      startTest({
+        subjects: coreSubjects,
+        year: 'all',
+        count: 80,
+        difficulty: 'medium',
+        mode: 'mock',
+        time: 40
+      });
     };
 
     // Announcements Bell
@@ -1715,7 +1744,38 @@
       renderPractice();
     });
 
+    function getValidYear(subjs, yr) {
+      if (yr === 'all') return 'all';
+      const missing = subjs.some(s => !questionMeta.some(q => q.subject === s && String(q.year) === String(yr)));
+      return missing ? 'all' : yr;
+    }
+
     function renderPractice() {
+      if (practice.mode === 'mock') {
+        practice.selected = subjects.slice(0, 4);
+        practice.time = 60;
+        practice.count = 120;
+        practice.diff = 'medium';
+        $('#q-val').textContent = '120';
+      }
+
+      if (practice.mode === 'practice') {
+        $('#time-config').style.display = 'none';
+        $('#diff-row').style.display = 'flex';
+        $('#q-count-row').style.display = 'flex';
+        $('#mock-notice').style.display = 'none';
+      } else if (practice.mode === 'timed') {
+        $('#time-config').style.display = 'flex';
+        $('#diff-row').style.display = 'none';
+        $('#q-count-row').style.display = 'flex';
+        $('#mock-notice').style.display = 'none';
+      } else if (practice.mode === 'mock') {
+        $('#time-config').style.display = 'none';
+        $('#diff-row').style.display = 'none';
+        $('#q-count-row').style.display = 'none';
+        $('#mock-notice').style.display = 'block';
+      }
+
       $('#course-label').textContent = userCourse;
       const grid = $('#subject-grid');
       grid.innerHTML = '';
@@ -1726,14 +1786,23 @@
         const b = document.createElement('button');
         let cls = 'subject';
         if (practice.selected.includes(s)) cls += ' on';
-        if (!hasQ) cls += ' disabled';
+        if (!hasQ || practice.mode === 'mock') cls += ' disabled';
+        
         b.className = cls;
         
         b.innerHTML = `<span class="dot"></span>${s}`;
         b.addEventListener('click', () => {
-          if (!hasQ) return;
+          if (!hasQ || practice.mode === 'mock') return;
+          
           const i = practice.selected.indexOf(s);
-          if (i === -1) practice.selected.push(s); else practice.selected.splice(i, 1);
+          if (i === -1) {
+            if (practice.mode === 'timed' && practice.selected.length >= 4) {
+              return toast('You can only select up to 4 subjects in Timed mode.');
+            }
+            practice.selected.push(s);
+          } else {
+            practice.selected.splice(i, 1);
+          }
           renderPractice();
         });
         grid.appendChild(b);
@@ -1802,20 +1871,21 @@
       practice.mode = b.dataset.mode;
       $$('button', $('#mode-seg')).forEach(x => x.classList.toggle('on', x === b));
       
-      const timeConfig = $('#time-config');
       if (practice.mode === 'practice') {
-        timeConfig.style.display = 'none';
-        practice.time = 0; 
+        practice.time = 0;
+        if (practice.count === 120) { practice.count = 20; $('#q-val').textContent = '20'; }
       } else if (practice.mode === 'timed') {
-        timeConfig.style.display = 'flex';
         if (practice.time === 0) {
           practice.time = 15;
           $$('button', $('#time-seg')).forEach(x => x.classList.toggle('on', x.dataset.time === '15'));
         }
-      } else if (practice.mode === 'mock') {
-        timeConfig.style.display = 'none';
-        practice.time = 120; 
+        if (practice.selected.length > 4) {
+          practice.selected = practice.selected.slice(0, 4);
+          toast('Max 4 subjects in Timed mode');
+        }
       }
+      
+      renderPractice();
     });
 
     $('#time-seg').addEventListener('click', e => {
@@ -1831,21 +1901,36 @@
 
     $('#start-btn').addEventListener('click', async () => {
       if (!requireAccess()) return;
-      if (!practice.selected.length) return toast('Pick at least one subject first.');
+      
+      let subjs = practice.selected;
+      let yr = practice.year;
+      let count = practice.count;
+      let time = practice.time;
+      let diff = practice.diff;
+      
+      if (practice.mode === 'mock') {
+        subjs = subjects.slice(0, 4);
+        yr = getValidYear(subjs, practice.year);
+      } else if (practice.mode === 'timed') {
+        if (!subjs.length) return toast('Pick at least one subject first.');
+        if (subjs.length > 4) subjs = subjs.slice(0, 4);
+      } else {
+        if (!subjs.length) return toast('Pick at least one subject first.');
+      }
 
       let timeHtml = '';
-      if (practice.mode === 'timed') timeHtml = `<div class="summary-row"><span>Time</span><span>${practice.time} mins</span></div>`;
-      else if (practice.mode === 'mock') timeHtml = `<div class="summary-row"><span>Time</span><span>120 mins (JAMB standard)</span></div>`;
+      if (practice.mode === 'timed') timeHtml = `<div class="summary-row"><span>Time</span><span>${time} mins</span></div>`;
+      else if (practice.mode === 'mock') timeHtml = `<div class="summary-row"><span>Time</span><span>60 mins (JAMB standard)</span></div>`;
       else timeHtml = `<div class="summary-row"><span>Time</span><span>Infinite (Practice)</span></div>`;
       
       openModal({
         title: 'Review Session',
         body: `
           <div class="summary-box">
-            <div class="summary-row"><span>Subjects</span><span>${practice.selected.join(', ')}</span></div>
-            <div class="summary-row"><span>Year</span><span>${practice.year === 'all' ? 'All Years' : practice.year}</span></div>
-            <div class="summary-row"><span>Questions</span><span>${practice.count}</span></div>
-            <div class="summary-row"><span>Difficulty</span><span style="text-transform:capitalize">${practice.diff}</span></div>
+            <div class="summary-row"><span>Subjects</span><span>${subjs.join(', ')}</span></div>
+            <div class="summary-row"><span>Year</span><span>${yr === 'all' ? 'All Years' : yr}</span></div>
+            <div class="summary-row"><span>Questions</span><span>${count}</span></div>
+            <div class="summary-row"><span>Difficulty</span><span style="text-transform:capitalize">${diff}</span></div>
             <div class="summary-row"><span>Mode</span><span style="text-transform:capitalize">${practice.mode}</span></div>
             ${timeHtml}
           </div>
@@ -1856,12 +1941,12 @@
           style: 'primary',
           onClick: () => {
             startTest({
-              subjects: practice.selected,
-              year: practice.year,
-              count: practice.count,
-              difficulty: practice.diff,
+              subjects: subjs,
+              year: yr,
+              count: count,
+              difficulty: diff,
               mode: practice.mode,
-              time: practice.time
+              time: time
             });
           }
         }]
@@ -2103,39 +2188,6 @@
     });
 
   })();
-  // ---- PWA install prompt ----
-  let deferredInstallPrompt = null;
-  window.addEventListener('beforeinstallprompt', e => {
-    e.preventDefault();
-    deferredInstallPrompt = e;
-    const menu = document.querySelector('#profile .menu');
-    if (menu && !document.getElementById('install-btn')) {
-      const btn = document.createElement('button');
-      btn.id = 'install-btn';
-      btn.className = 'menu-item';
-      btn.innerHTML = `
-        <div class="menu-ic"><i data-lucide="download"></i></div>
-        <div class="menu-body"><h4>Install Stride</h4><p>Add to your home screen</p></div>
-        <span class="chev"><i data-lucide="chevron-right"></i></span>`;
-      btn.addEventListener('click', async () => {
-        if (!deferredInstallPrompt) return;
-        deferredInstallPrompt.prompt();
-        const { outcome } = await deferredInstallPrompt.userChoice;
-        if (outcome === 'accepted') {
-          toast('Installing…');
-          btn.remove();
-        }
-        deferredInstallPrompt = null;
-      });
-      menu.prepend(btn);
-      if (window.lucide) lucide.createIcons();
-    }
-  });
-  window.addEventListener('appinstalled', () => {
-    const btn = document.getElementById('install-btn');
-    if (btn) btn.remove();
-    deferredInstallPrompt = null;
-  });
   </script>
 </body>
 </html>

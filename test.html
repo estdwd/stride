@@ -652,7 +652,7 @@
       if (config.mode === 'timed') {
         if (config.time && config.time > 0) startTimer(config.time);
       } else if (config.mode === 'mock') {
-        startTimer(120);
+        startTimer(config.time || 120);
       }
 
       html.style.visibility = 'visible';
