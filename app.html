@@ -4,6 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#000000" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Stride" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Stride | App</title>
 
   <script>
@@ -445,6 +452,28 @@
     .no-icons .nav-item::after { content: attr(aria-label); }
     .no-icons .fab::after { content: "+"; font-size: 1.9rem; line-height: 1; }
     .no-icons .heart::after { content: "\2665"; font-size: 1.05rem; }
+
+    /* ---- streak + completion polish ---- */
+    .tasks li.done { box-shadow: 0 0 0 1px rgba(123,58,36,.25), 0 0 16px rgba(255,255,255,.28); }
+    .tasks li.done .chk { box-shadow: 0 0 10px rgba(123,58,36,.7); }
+    .card { transition: box-shadow .5s ease, transform .35s var(--ease); }
+    .card.all-done { animation: doneGlow 2.6s ease-in-out infinite; }
+    @keyframes doneGlow { 0%, 100% { box-shadow: 0 0 18px 0 rgba(255,140,60,.35); } 50% { box-shadow: 0 0 38px 6px rgba(255,140,60,.65); } }
+    .streak.lit { animation: litGlow 2.8s ease-in-out infinite; }
+    @keyframes litGlow { 0%, 100% { box-shadow: 0 0 20px 0 rgba(255,190,40,.35); } 50% { box-shadow: 0 0 42px 8px rgba(255,190,40,.7); } }
+    .streak { position: relative; overflow: hidden; }
+    .streak-num.bump { animation: numBump .9s cubic-bezier(.2,.9,.3,1.5); }
+    @keyframes numBump { 0% { transform: scale(.7); } 55% { transform: scale(1.25); } 100% { transform: scale(1); } }
+    .streak.celebrate .flame { animation: flameBurst 1s cubic-bezier(.2,.9,.3,1.4), flame 2.2s ease-in-out 1s infinite; }
+    @keyframes flameBurst { 0% { transform: scale(.3) rotate(-20deg); } 60% { transform: scale(2) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
+    .week .on b { animation: dotPop .5s cubic-bezier(.2,.9,.3,1.6) var(--d, 0ms) both; }
+    @keyframes dotPop { 0% { transform: scale(.3); } 100% { transform: scale(1); } }
+    .week .today b { border-color: var(--ink); border-style: dashed; }
+    .week .today.on b { border-style: solid; }
+    .sparks { position: absolute; left: 50%; top: 55%; pointer-events: none; }
+    .sparks i { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #ff9d2e; box-shadow: 0 0 10px 2px rgba(255,157,46,.9); animation: spark 1s ease-out both; }
+    @keyframes spark { 0% { transform: translate(0,0) scale(1); opacity: 1; } 100% { transform: translate(var(--x), var(--y)) scale(0); opacity: 0; } }
+    .notif-on .tag-soon { background: #22c55e; color: #052e12; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
       .glow { animation: none; } .flame { animation: none; }
@@ -470,6 +499,9 @@
     .nav-item { position: relative; }
     .nav-item.dot::before { content: ''; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--orange); }
   </style>
+  <script>
+    if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  </script>
 </head>
 <body>
 
@@ -520,7 +552,7 @@
       </div>
 
       <div class="grid" id="cards">
-        <article class="card tall c-orange stagger" data-id="plan" data-cat="streaks" style="--i:2">
+        <article class="card tall c-orange stagger" id="plan-card" data-id="plan" data-cat="streaks" style="--i:2">
           <div class="card-head">
             <div><h3>Plan for<br/>the Day</h3><p class="sub" id="plan-count">1 of 3 done</p></div>
             <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
@@ -528,9 +560,9 @@
           <ul class="tasks" id="task-list"></ul>
         </article>
 
-        <article class="card tall streak stagger" data-id="streak" data-cat="streaks" style="--i:3">
+        <article class="card tall streak stagger" id="streak-card" data-id="streak" data-cat="streaks" style="--i:3">
           <div class="card-head">
-            <div><h3>Day<br/>Streak</h3><p class="sub"><i data-lucide="flame" class="flame" style="width:12px;height:12px;vertical-align:-1px"></i> keep it alive</p></div>
+            <div><h3>Day<br/>Streak</h3><p class="sub" id="streak-sub"><i data-lucide="flame" class="flame" style="width:12px;height:12px;vertical-align:-1px"></i> <span id="streak-sub-t">take a test to count today</span></p></div>
             <button class="heart" aria-label="Save card"><i data-lucide="heart"></i></button>
           </div>
           <div>
@@ -736,6 +768,11 @@
             <div class="menu-ic"><i data-lucide="credit-card"></i></div>
             <div class="menu-body"><h4>Subscription plan</h4><p id="plan-sub">Free trial</p></div>
             <span class="tag-soon" id="plan-tag">Upgrade</span>
+          </button>
+          <button class="menu-item" id="notif-btn">
+            <div class="menu-ic"><i data-lucide="bell"></i></div>
+            <div class="menu-body"><h4>Notifications</h4><p id="notif-sub">Daily streak reminders</p></div>
+            <span class="tag-soon" id="notif-tag">Enable</span>
           </button>
           <button class="menu-item" id="password-btn">
             <div class="menu-ic"><i data-lucide="key-round"></i></div>
@@ -1203,16 +1240,7 @@
       if (suspended) { showSuspended(dbProfile); return; }
       touchSeen();
 
-      // Streak Logic
-      const dayStr = d => d.toLocaleDateString('en-CA');
-      const todayStr = dayStr(new Date());
-      if (dbProfile.last_login_date !== todayStr) {
-        const yest = new Date(); yest.setDate(yest.getDate() - 1);
-        const newStreak = dbProfile.last_login_date === dayStr(yest) ? (dbProfile.streak_count || 0) + 1 : 1;
-        await supabase.from('profiles').update({ streak_count: newStreak, last_login_date: todayStr }).eq('id', currentUser.id);
-        dbProfile.streak_count = newStreak;
-        dbProfile.last_login_date = todayStr;
-      }
+      // Streak is now earned by finishing a test (see test.html), not by logging in.
 
       await Promise.all([loadAccess(), fetchMeta(), loadDynamicContent()]);
       html.style.visibility = 'visible';
@@ -1226,6 +1254,23 @@
       location.replace('index.html');
     }
 
+    const ymd = d => d.toLocaleDateString('en-CA');
+    // streak shown = stored count, but only if it's still alive (today or yesterday)
+    function effStreak() {
+      const l = dbProfile.last_login_date; if (!l) return 0;
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      return (l === ymd(new Date()) || l === ymd(y)) ? (dbProfile.streak_count || 0) : 0;
+    }
+    function burstSparks(host) {
+      if (reduceMotion()) return;
+      const box = document.createElement('div'); box.className = 'sparks';
+      for (let i = 0; i < 14; i++) {
+        const sp = document.createElement('i'); const a = (i / 14) * Math.PI * 2, r = 70 + Math.random() * 60;
+        sp.style.setProperty('--x', Math.cos(a) * r + 'px'); sp.style.setProperty('--y', Math.sin(a) * r + 'px');
+        sp.style.animationDelay = (Math.random() * 120) + 'ms'; box.appendChild(sp);
+      }
+      host.appendChild(box); setTimeout(() => box.remove(), 1400);
+    }
     const reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     
     function countUp(el, to, dur, suffix = '') {
@@ -1367,15 +1412,35 @@
       });
       $('#plan-count').textContent = tasks.length ? tasks.filter(x => x.done).length + ' of ' + tasks.length + ' done' : 'Nothing planned';
 
-      const streak = dbProfile.streak_count || 0;
-      countUp($('#streak-num'), streak, 700);
+      // Plan card glows once every task is done
+      $('#plan-card').classList.toggle('all-done', tasks.length > 0 && left === 0);
+
+      const todayS = ymd(new Date());
+      const doneToday = dbProfile.last_login_date === todayS;
+      const streak = effStreak();
+      const pop = (() => { try { const v = localStorage.getItem('stride_streak_pop'); if (v) localStorage.removeItem('stride_streak_pop'); return v; } catch (e) { return null; } })();
+      const numEl = $('#streak-num');
+      countUp(numEl, streak, pop ? 900 : 700);
+      const sc = $('#streak-card');
+      sc.classList.toggle('lit', doneToday);
+      $('#streak-sub-t').textContent = doneToday ? 'locked in today' : (streak ? 'take a test to keep it alive' : 'take a test to start');
+      if (pop) { sc.classList.remove('celebrate'); void sc.offsetWidth; sc.classList.add('celebrate'); numEl.classList.remove('bump'); void numEl.offsetWidth; numEl.classList.add('bump'); burstSparks(sc); }
+
+      // current Mon–Sun week, lit for every day inside the streak run
       const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
       const weekEl = $('#streak-week');
       weekEl.innerHTML = '';
+      const now = new Date();
+      const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+      const last = dbProfile.last_login_date ? new Date(dbProfile.last_login_date + 'T00:00:00') : null;
       labels.forEach((l, i) => {
+        const day = new Date(monday); day.setDate(monday.getDate() + i);
         const d = document.createElement('div');
-        if (i < streak) d.className = 'on';
-        d.appendChild(Object.assign(document.createElement('b')));
+        const diff = last ? Math.round((last - new Date(ymd(day) + 'T00:00:00')) / 86400000) : -1;
+        const lit = streak > 0 && diff >= 0 && diff < streak;
+        if (lit) { d.className = 'on'; d.style.setProperty('--d', (i * 70) + 'ms'); }
+        if (ymd(day) === todayS) d.classList.add('today');
+        d.appendChild(document.createElement('b'));
         d.appendChild(document.createTextNode(l));
         weekEl.appendChild(d);
       });
@@ -1965,9 +2030,63 @@
       toLogin();
     });
 
+
+    // ---------- Notifications ----------
+    // Optional real background push (works even when the app is closed): create a free
+    // OneSignal app, paste its App ID here. Leave empty to use local reminders only.
+    const ONESIGNAL_APP_ID = '';
+    if (ONESIGNAL_APP_ID) {
+      const os = document.createElement('script');
+      os.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js'; os.defer = true;
+      document.head.appendChild(os);
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      OneSignalDeferred.push(async OneSignal => { await OneSignal.init({ appId: ONESIGNAL_APP_ID, serviceWorkerPath: 'sw.js' }); });
+    }
+    async function showNote(title, body, tag) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        await reg.showNotification(title, { body, icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', tag: tag || 'stride', data: { url: './app.html' } });
+      } catch (e) { try { new Notification(title, { body, icon: 'icons/icon-192.png' }); } catch (_) {} }
+    }
+    function notifState() { return 'Notification' in window ? Notification.permission : 'unsupported'; }
+    function renderNotifBtn() {
+      const st = notifState(), on = st === 'granted' && localStorage.getItem('stride_notif') !== 'off';
+      $('#notif-tag').textContent = st === 'unsupported' ? 'N/A' : st === 'denied' ? 'Blocked' : on ? 'On' : 'Enable';
+      $('#notif-btn').classList.toggle('notif-on', on);
+      $('#notif-sub').textContent = st === 'denied' ? 'Allow notifications in browser settings' : 'Daily streak reminders';
+    }
+    let reminderTimer;
+    function scheduleReminder() {
+      clearTimeout(reminderTimer);
+      if (notifState() !== 'granted' || localStorage.getItem('stride_notif') === 'off') return;
+      if (dbProfile.last_login_date === ymd(new Date())) return;      // already studied today
+      const t = new Date(); t.setHours(19, 0, 0, 0);                    // 7 PM local
+      let ms = t - Date.now(); if (ms < 0) ms = 60 * 1000;               // past 7pm: nudge in a minute
+      reminderTimer = setTimeout(() => {
+        if (dbProfile.last_login_date !== ymd(new Date())) showNote('Your streak is on the line 🔥', 'Take a quick test to keep your ' + effStreak() + '-day streak alive.', 'streak');
+      }, ms);
+    }
+    $('#notif-btn').addEventListener('click', async () => {
+      const st = notifState();
+      if (st === 'unsupported') return toast('Notifications are not supported here.');
+      if (st === 'denied') return toast('Notifications are blocked. Enable them in browser settings.');
+      if (st === 'granted') {
+        const off = localStorage.getItem('stride_notif') !== 'off';
+        localStorage.setItem('stride_notif', off ? 'off' : 'on');
+        toast(off ? 'Reminders turned off.' : 'Reminders turned on.');
+      } else {
+        const r = await Notification.requestPermission();
+        if (r === 'granted') { localStorage.setItem('stride_notif', 'on'); showNote('Stride', 'Reminders are on. Finish a test daily to keep your streak 🔥', 'welcome'); }
+      }
+      renderNotifBtn(); scheduleReminder();
+    });
+    renderNotifBtn();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleReminder(); });
+
     function renderAll() {
       renderAccess();
       renderHome();
+      scheduleReminder();
       renderPractice();
       renderAnalytics();
       renderProfile();
