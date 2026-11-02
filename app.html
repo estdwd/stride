@@ -2103,6 +2103,39 @@
     });
 
   })();
+  // ---- PWA install prompt ----
+  let deferredInstallPrompt = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    const menu = document.querySelector('#profile .menu');
+    if (menu && !document.getElementById('install-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'install-btn';
+      btn.className = 'menu-item';
+      btn.innerHTML = `
+        <div class="menu-ic"><i data-lucide="download"></i></div>
+        <div class="menu-body"><h4>Install Stride</h4><p>Add to your home screen</p></div>
+        <span class="chev"><i data-lucide="chevron-right"></i></span>`;
+      btn.addEventListener('click', async () => {
+        if (!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        if (outcome === 'accepted') {
+          toast('Installing…');
+          btn.remove();
+        }
+        deferredInstallPrompt = null;
+      });
+      menu.prepend(btn);
+      if (window.lucide) lucide.createIcons();
+    }
+  });
+  window.addEventListener('appinstalled', () => {
+    const btn = document.getElementById('install-btn');
+    if (btn) btn.remove();
+    deferredInstallPrompt = null;
+  });
   </script>
 </body>
 </html>
