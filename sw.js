@@ -1,5 +1,6 @@
 /* Stride service worker */
-const VERSION = 'stride-v3';
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+const VERSION = 'stride-v5';
 
 // Only list files that ACTUALLY exist. Anything missing here breaks install.
 const SHELL = [

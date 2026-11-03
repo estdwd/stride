@@ -187,6 +187,47 @@
     .streak-banner.fresh .fl { animation: flameBurst 1s cubic-bezier(.2,.9,.3,1.4) .2s both; }
     @keyframes bannerGlow { 0% { opacity: 0; transform: translateY(14px) scale(.96); } 30% { opacity: 1; transform: none; box-shadow: 0 0 0 0 rgba(255,176,32,.7); } 100% { box-shadow: 0 0 34px 6px rgba(255,176,32,.0); } }
     @keyframes flameBurst { 0% { transform: scale(.2) rotate(-20deg); } 60% { transform: scale(1.5) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
+  
+    /* ---- v2 additions ---- */
+    .opt { transition: transform .18s var(--ease, ease), border-color .2s, background .2s; }
+    .opt:active { transform: scale(.98); }
+    .opt.chosen { animation: optPop .28s ease; }
+    @keyframes optPop { 50% { transform: scale(1.025); } }
+    .q-card { animation: riseIn .45s cubic-bezier(.16,1,.3,1) both; }
+    @keyframes riseIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    .flagbtn { font: inherit; cursor: pointer; border: 1px solid rgba(255,255,255,.14); background: transparent; color: var(--muted,#9a9a9a); margin-left: auto; }
+    .flagbtn.on { color: #F8CB4A; border-color: rgba(248,203,74,.5); background: rgba(248,203,74,.1); }
+    .sheet { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
+    .sheet[hidden] { display: none; }
+    .sheet-back { position: absolute; inset: 0; background: rgba(0,0,0,.6); animation: fadeI .25s ease both; }
+    .sheet-card { position: relative; width: 100%; max-width: 560px; max-height: 78vh; overflow: auto; background: #101010; border: 1px solid rgba(255,255,255,.1); border-radius: 28px 28px 0 0; padding: 20px 18px 30px; animation: sheetUp .35s cubic-bezier(.16,1,.3,1) both; }
+    @keyframes sheetUp { from { transform: translateY(100%); } to { transform: none; } }
+    @keyframes fadeI { from { opacity: 0; } to { opacity: 1; } }
+    .sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .sheet-head h3 { font-weight: 500; letter-spacing: -.02em; }
+    .sheet h4 { font-weight: 400; font-size: .8rem; color: #9a9a9a; margin: 14px 0 8px; text-transform: uppercase; letter-spacing: .06em; }
+    .cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 8px; }
+    .cell { height: 44px; border-radius: 14px; border: 1px solid rgba(255,255,255,.16); background: transparent; color: #fff; font: inherit; cursor: pointer; transition: transform .15s; }
+    .cell:active { transform: scale(.92); }
+    .cell.ans { background: rgba(141,185,234,.2); border-color: rgba(141,185,234,.5); }
+    .cell.flag { background: rgba(248,203,74,.18); border-color: #F8CB4A; color: #F8CB4A; }
+    .cell.cur { outline: 2px solid #EB7650; outline-offset: 2px; }
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: .75rem; color: #9a9a9a; margin-top: 16px; }
+    .jamb { margin: 14px 0; padding: 18px 20px; border-radius: 26px; background: linear-gradient(135deg, rgba(235,118,80,.18), rgba(141,185,234,.12)); border: 1px solid rgba(255,255,255,.1); animation: riseIn .6s .15s cubic-bezier(.16,1,.3,1) both; }
+    .jamb .k { font-size: .78rem; color: #9a9a9a; }
+    .jamb .v { font-size: 2.6rem; font-weight: 500; letter-spacing: -.04em; line-height: 1.1; }
+    .jamb .v small { font-size: 1rem; color: #9a9a9a; font-weight: 400; }
+    .jamb .gap { font-size: .85rem; margin-top: 4px; }
+    .jamb .gap.good { color: #97D86E; } .jamb .gap.bad { color: #F8CB4A; }
+    .subj-row .bar > div { animation: growBar .9s cubic-bezier(.16,1,.3,1) both; transform-origin: left; }
+    @keyframes growBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .review-item { animation: riseIn .45s cubic-bezier(.16,1,.3,1) both; }
+    .review-exp { margin-top: 12px; padding: 12px 14px; border-radius: 16px; background: rgba(141,185,234,.1); border: 1px solid rgba(141,185,234,.25); font-size: .85rem; line-height: 1.5; color: #d9e6f7; }
+    .review-exp b { display: block; font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: #8DB9EA; margin-bottom: 4px; font-weight: 500; }
+    .rv-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .rv-tabs button { font: inherit; padding: 8px 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); background: transparent; color: #9a9a9a; cursor: pointer; }
+    .rv-tabs button.on { background: #fff; color: #000; border-color: #fff; }
+    @media (prefers-reduced-motion: reduce) { .q-card, .jamb, .review-item, .sheet-card, .opt.chosen, .subj-row .bar > div { animation: none !important; } }
   </style>
   <script>
     if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
@@ -208,6 +249,7 @@
       <div class="progress-bar"><div id="progress-fill"></div></div>
     </div>
     <div class="timer" id="timer" hidden>--:--</div>
+    <button class="back-btn" id="grid-btn" aria-label="Question navigator" hidden><i data-lucide="layout-grid"></i></button>
   </header>
 
   <main id="main">
@@ -239,6 +281,14 @@
     </div>
   </div>
 
+  <div class="sheet" id="sheet" hidden>
+    <div class="sheet-back" id="sheet-back"></div>
+    <div class="sheet-card">
+      <div class="sheet-head"><h3>Questions</h3><button class="back-btn" id="sheet-x" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div id="sheet-body"></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
@@ -262,6 +312,18 @@
     let timerInterval = null;
     let secondsLeft = 0;
     let submitting = false;
+    let flags = {};
+    let customExp = {};
+    let endsAt = 0;
+    const RK = 'stride_test_resume';
+    const MK = () => 'stride_mistakes_' + (currentUser ? currentUser.id : 'x');
+    function getMistakes() { try { return JSON.parse(localStorage.getItem(MK()) || '[]'); } catch (e) { return []; } }
+    function setMistakes(a) { try { localStorage.setItem(MK(), JSON.stringify(a.slice(0, 300))); } catch (e) {} }
+    function saveProgress() {
+      if (!questions.length || submitting || !currentUser || !config || !config.sid) return;
+      try { localStorage.setItem(RK, JSON.stringify({ sid: config.sid, uid: currentUser.id, cfg: config, questions, answers, flags, idx: currentIndex, startedAt, endsAt, customExp, ts: Date.now() })); } catch (e) {}
+    }
+    function clearProgress() { try { localStorage.removeItem(RK); } catch (e) {} }
 
     const toastEl = $('#toast');
     let toastTimer;
@@ -310,36 +372,31 @@
       if (!questions.length || submitting) { location.replace('app.html'); return; }
       openModal({
         title: 'Leave the test?',
-        body: 'Your answers so far will not be saved. Are you sure you want to quit?',
+        body: 'Your progress is saved. You can resume from your dashboard' + (endsAt ? ' (the timer keeps running).' : '.'),
         actions: [
           { label: 'Stay', style: 'ghost' },
-          { label: 'Quit test', style: 'danger', onClick: () => location.replace('app.html') }
+          { label: 'Save & exit', style: 'primary', onClick: () => { saveProgress(); location.replace('app.html'); } },
+          { label: 'Discard', style: 'danger', onClick: () => { clearProgress(); try { localStorage.removeItem('stride_test_config'); } catch (e) {} location.replace('app.html'); } }
         ]
       });
     }
     $('#back-btn').addEventListener('click', confirmExit);
 
-    window.addEventListener('beforeunload', e => {
-      if (questions.length && !submitting) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    });
+    window.addEventListener('pagehide', saveProgress);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) saveProgress(); });
 
     function formatTime(s) {
       const m = Math.floor(s / 60);
       const sec = s % 60;
       return m + ':' + String(sec).padStart(2, '0');
     }
-    function startTimer(minutes) {
-      secondsLeft = minutes * 60;
+    function startTimer(minutes, absEnd) {
+      endsAt = absEnd || (Date.now() + minutes * 60000);
       const el = $('#timer');
       el.hidden = false;
-      el.textContent = formatTime(secondsLeft);
-      el.className = 'timer';
       clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        secondsLeft--;
+      const step = () => {
+        secondsLeft = Math.round((endsAt - Date.now()) / 1000);
         if (secondsLeft <= 0) {
           clearInterval(timerInterval);
           el.textContent = '0:00';
@@ -352,12 +409,19 @@
         el.className = 'timer';
         if (secondsLeft <= 60) el.classList.add('danger');
         else if (secondsLeft <= 300) el.classList.add('warn');
-      }, 1000);
+      };
+      step();
+      if (secondsLeft > 0) timerInterval = setInterval(step, 1000);
     }
     function stopTimer() { clearInterval(timerInterval); }
 
     async function loadQuestions(cfg) {
+      if (cfg.retry) {
+        const m = getMistakes().slice(0, cfg.count || 20);
+        return m.map(x => ({ ...x }));
+      }
       if (Array.isArray(cfg.custom) && cfg.custom.length) {
+        cfg.custom.forEach((c, i) => { if (c.explanation) customExp['n' + i] = c.explanation; });
         return cfg.custom.map(({ answer, explanation, ...q }, i) => ({ id: 'n' + i, subject: cfg.subjects[0], year: null, difficulty: 'medium', section: null, image_url: null, ...q }));
       }
       const { data, error } = await supabase.rpc('pick_questions', {
@@ -378,13 +442,15 @@
       $('#q-pos').textContent = currentIndex + 1;
       $('#q-total').textContent = total;
       $('#q-answered').textContent = answered + ' answered';
+      saveProgress();
       $('#progress-fill').style.width = ((currentIndex + 1) / total * 100) + '%';
 
       const chips = [
         `<span class="q-chip num">Q${currentIndex + 1}</span>`,
         `<span class="q-chip sub">${escapeHtml(q.subject)}</span>`,
         q.year ? `<span class="q-chip">${q.year}</span>` : '',
-        q.difficulty ? `<span class="q-chip diff ${q.difficulty}">${q.difficulty}</span>` : ''
+        q.difficulty ? `<span class="q-chip diff ${q.difficulty}">${q.difficulty}</span>` : '',
+        `<button class="q-chip flagbtn ${flags[q.id] ? 'on' : ''}" id="flag-btn">⚑ ${flags[q.id] ? 'Flagged' : 'Flag'}</button>`
       ].filter(Boolean).join('');
 
       const chosen = answers[q.id];
@@ -418,9 +484,11 @@
       $$('.opt').forEach(btn => {
         btn.addEventListener('click', () => {
           answers[q.id] = btn.dataset.key;
+          saveProgress();
           renderQuestion();
         });
       });
+      $('#flag-btn').addEventListener('click', () => { if (flags[q.id]) delete flags[q.id]; else flags[q.id] = 1; saveProgress(); renderQuestion(); });
 
       $('#prev-btn').disabled = currentIndex === 0;
       const isLast = currentIndex === total - 1;
@@ -428,6 +496,26 @@
       $('#submit-btn').hidden = !isLast;
       icons();
     }
+
+    function openGrid() {
+      const groups = {};
+      questions.forEach((q, i) => { const s = q.subject || 'Mixed'; (groups[s] = groups[s] || []).push(i); });
+      const fl = Object.keys(flags).length;
+      $('#sheet-body').innerHTML = Object.entries(groups).map(([s, idx]) =>
+        `<h4>${escapeHtml(s)}</h4><div class="cells">` + idx.map(i => {
+          const id = questions[i].id;
+          return `<button class="cell ${answers[id] ? 'ans' : ''} ${flags[id] ? 'flag' : ''} ${i === currentIndex ? 'cur' : ''}" data-i="${i}">${i + 1}</button>`;
+        }).join('') + '</div>').join('') +
+        `<div class="legend"><span>${Object.keys(answers).length} answered</span><span>${questions.length - Object.keys(answers).length} left</span><span>${fl} flagged</span></div>`;
+      $('#sheet').hidden = false;
+    }
+    $('#grid-btn').addEventListener('click', openGrid);
+    $('#sheet-x').addEventListener('click', () => { $('#sheet').hidden = true; });
+    $('#sheet-back').addEventListener('click', () => { $('#sheet').hidden = true; });
+    $('#sheet-body').addEventListener('click', e => {
+      const c = e.target.closest('.cell'); if (!c) return;
+      currentIndex = +c.dataset.i; $('#sheet').hidden = true; renderQuestion(); window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 
     function escapeHtml(s) {
       return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
@@ -449,7 +537,7 @@
       if (left > 0) {
         openModal({
           title: 'Submit now?',
-          body: `You still have ${left} unanswered question${left === 1 ? '' : 's'}. They will be marked wrong.`,
+          body: `You still have ${left} unanswered question${left === 1 ? '' : 's'}${Object.keys(flags).length ? ' and ' + Object.keys(flags).length + ' flagged' : ''}. Unanswered ones will be marked wrong.`,
           actions: [
             { label: 'Keep going', style: 'ghost' },
             { label: 'Submit anyway', style: 'primary', onClick: () => doSubmit(false) }
@@ -469,18 +557,36 @@
       const timeTaken = startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0;
 
       let graded = [];
-      try {
-        const payload = {};
-        questions.forEach(q => { payload[q.id] = answers[q.id] || null; });
-        const { data, error } = await supabase.rpc('submit_test', { p_mode: config.mode, p_answers: payload, p_note: config.noteId || null });
-        if (error) throw error;
-        graded = data || [];
-      } catch (e) {
-        console.error(e);
-        toast('Could not save your result. Check your connection and submit again.');
-        submitting = false;
-        return;
+      if (config.retry) {
+        graded = questions.map(q => ({ id: q.id, is_correct: answers[q.id] === q.correct, correct: q.correct }));
+      } else {
+        try {
+          const payload = {};
+          questions.forEach(q => { payload[q.id] = answers[q.id] || null; });
+          const { data, error } = await supabase.rpc('submit_test', { p_mode: config.mode, p_answers: payload, p_note: config.noteId || null });
+          if (error) throw error;
+          graded = data || [];
+        } catch (e) {
+          console.error(e);
+          toast('Could not save your result. Check your connection and submit again.');
+          submitting = false;
+          if (secondsLeft > 0) startTimer(0, endsAt);
+          return;
+        }
       }
+
+      // explanations (server-side, only fetched after grading)
+      const expMap = Object.assign({}, customExp);
+      if (!config.retry) {
+        try {
+          const ids = questions.map(q => String(q.id)).filter(i => !/^n\d+$/.test(i));
+          if (ids.length) {
+            const { data } = await supabase.rpc('question_explanations', { p_ids: ids });
+            (data || []).forEach(r => { if (r.explanation) expMap[String(r.id)] = r.explanation; });
+          }
+        } catch (e) { /* optional */ }
+      }
+      questions.forEach(q => { if (q.exp && !expMap[q.id]) expMap[q.id] = q.exp; });
 
       let correct = 0;
       const bySubject = {};
@@ -494,12 +600,28 @@
         bySubject[sub].total++;
         const isCorrect = !!g.is_correct;
         if (isCorrect) { correct++; bySubject[sub].score++; }
-        review.push({ q: q.question, chosen: answers[q.id] || null, correct: g.correct || null, isCorrect });
+        review.push({ q: q.question, chosen: answers[q.id] || null, correct: g.correct || null, isCorrect, exp: expMap[q.id] || '', subject: sub, flagged: !!flags[q.id] });
       });
 
       try { localStorage.removeItem('stride_test_config'); } catch (e) {}
+      clearProgress();
 
-      const streakInfo = await countStreak();
+      // mistake bank: add misses, drop anything now answered correctly
+      try {
+        let bank = getMistakes();
+        const missed = [];
+        questions.forEach(q => {
+          const g = byId[q.id] || {};
+          if (/^n\d+$/.test(String(q.id))) return;
+          bank = bank.filter(m => String(m.id) !== String(q.id));
+          if (!g.is_correct && g.correct) {
+            missed.push({ id: q.id, question: q.question, option_a: q.option_a, option_b: q.option_b, option_c: q.option_c, option_d: q.option_d, subject: q.subject, year: q.year, difficulty: q.difficulty, image_url: q.image_url || null, correct: g.correct, exp: expMap[q.id] || '' });
+          }
+        });
+        setMistakes(missed.concat(bank));
+      } catch (e) {}
+
+      const streakInfo = config.retry ? null : await countStreak();
       showResult(correct, total, bySubject, timeTaken, review, streakInfo);
     }
 
@@ -535,6 +657,14 @@
 
       $('#nav-bar').hidden = true;
       $('#timer').hidden = true;
+      $('#grid-btn').hidden = true;
+
+      const subs = Object.values(bySubject);
+      const avgFrac = subs.length ? subs.reduce((a, s) => a + s.score / s.total, 0) / subs.length : 0;
+      const jamb = Math.round(avgFrac * 400);
+      let target = 0; try { target = +localStorage.getItem('stride_target') || 0; } catch (e) {}
+      const gapTxt = target ? (jamb >= target ? `<div class="gap good">🎯 ${jamb - target} above your target of ${target}</div>` : `<div class="gap bad">${target - jamb} points to your target of ${target}</div>`) : '';
+      const jambHtml = config.retry ? '' : `<div class="jamb"><div class="k">${config.mode === 'mock' ? 'JAMB score' : 'Estimated JAMB score'}</div><div class="v"><span id="jamb-n">0</span><small> / 400</small></div>${gapTxt}</div>`;
 
       $('#main').innerHTML = `
         <div class="result-screen">
@@ -544,6 +674,8 @@
             <div class="result-time">Completed in ${formatTime(timeTaken)}</div>
           </div>
 
+          ${jambHtml}
+
           ${streakInfo ? `<div class="streak-banner ${streakInfo.isNew ? 'fresh' : ''}"><span class="fl">🔥</span><div><b>${streakInfo.n}-day streak</b><small>${streakInfo.isNew ? 'Streak extended — nice work!' : 'Already counted today. Keep going!'}</small></div></div>` : ''}
 
           ${subjRows ? `<div class="result-breakdown"><h3>By subject</h3>${subjRows}</div>` : ''}
@@ -552,6 +684,7 @@
             <button class="nav-btn next" id="review-btn">
               <i data-lucide="list-checks"></i> Review answers
             </button>
+            ${getMistakes().length && !config.retry ? `<button class="nav-btn prev" id="retry-btn"><i data-lucide="rotate-ccw"></i> Retry missed (${getMistakes().length})</button>` : ''}
             <button class="nav-btn prev" id="home-btn">
               <i data-lucide="home"></i> Back to app
             </button>
@@ -562,24 +695,33 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
       $('#review-btn').addEventListener('click', () => showReview(review));
+      const rb = $('#retry-btn');
+      if (rb) rb.addEventListener('click', () => {
+        try { localStorage.setItem('stride_test_config', JSON.stringify({ retry: true, mode: 'practice', subjects: ['Mistakes'], year: 'all', count: 20, sid: 'r' + Date.now() })); } catch (e) {}
+        location.replace('test.html');
+      });
+      const countUp = (el, to, ms) => { if (!el) return; const t0 = performance.now(); const f = n => { const k = Math.min(1, (n - t0) / ms); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); };
+      countUp($('#jamb-n'), jamb, 1100);
       $('#home-btn').addEventListener('click', () => location.replace('app.html'));
     }
 
-    function showReview(review) {
-      const items = review.map((r, i) => {
+    function showReview(review, only) {
+      const list = review.map((r, i) => ({ r, i })).filter(x => !only || !x.r.isCorrect);
+      const items = list.map(({ r, i }, n) => {
         const rowClass = r.isCorrect ? 'correct' : 'wrong';
         const yourTxt = r.chosen
           ? `${r.chosen.toUpperCase()} — ${escapeHtml(questions[i]['option_' + r.chosen] || '')}`
           : 'Not answered';
-        const correctTxt = `${r.correct.toUpperCase()} — ${escapeHtml(questions[i]['option_' + r.correct] || '')}`;
-        return `<div class="review-item ${rowClass}">
-          <div class="review-q"><b style="color:var(--muted);font-weight:400">Q${i + 1}.</b> ${escapeHtml(r.q)}</div>
+        const correctTxt = r.correct ? `${r.correct.toUpperCase()} — ${escapeHtml(questions[i]['option_' + r.correct] || '')}` : '—';
+        return `<div class="review-item ${rowClass}" style="animation-delay:${Math.min(n, 12) * 40}ms">
+          <div class="review-q"><b style="color:var(--muted);font-weight:400">Q${i + 1}.</b> ${escapeHtml(r.q)}${r.flagged ? ' <span style="color:#F8CB4A">⚑</span>' : ''}</div>
           <div class="review-ans">
             <div class="row"><span class="lbl">Your answer</span><span class="val ${r.isCorrect ? 'good' : 'bad'}">${yourTxt}</span></div>
             ${!r.isCorrect ? `<div class="row"><span class="lbl">Correct</span><span class="val good">${correctTxt}</span></div>` : ''}
           </div>
+          ${r.exp ? `<div class="review-exp"><b>Explanation</b>${escapeHtml(r.exp)}</div>` : ''}
         </div>`;
-      }).join('');
+      }).join('') || '<p style="color:var(--muted);text-align:center;padding:30px 0">Nothing wrong here. 🎉</p>';
 
       $('#main').innerHTML = `
         <div class="result-screen">
@@ -587,6 +729,7 @@
             <h1 style="font-size:1.6rem;font-weight:400;letter-spacing:-0.03em">Review</h1>
             <button class="back-btn" id="review-back" aria-label="Back to result"><i data-lucide="arrow-left"></i></button>
           </header>
+          <div class="rv-tabs"><button data-f="all" class="${only ? '' : 'on'}">All</button><button data-f="wrong" class="${only ? 'on' : ''}">Wrong only</button></div>
           <div class="review-list">${items}</div>
         </div>
       `;
@@ -598,7 +741,8 @@
         ]
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      $('#review-back').addEventListener('click', () => location.reload());
+      $('#review-back').addEventListener('click', () => location.replace('app.html'));
+      $$('.rv-tabs button').forEach(b => b.addEventListener('click', () => showReview(review, b.dataset.f === 'wrong')));
     }
 
     function showEmpty(title, msg) {
@@ -629,9 +773,18 @@
         return location.replace('app.html');
       }
 
+      let resumed = null;
+      try {
+        const r = JSON.parse(localStorage.getItem(RK) || 'null');
+        if (r && r.uid === currentUser.id && r.sid && r.sid === config.sid && Date.now() - r.ts < 864e5) resumed = r;
+        else if (r) localStorage.removeItem(RK);
+      } catch (e) {}
+      if (!config.sid) config.sid = 's' + Date.now();
+      try { localStorage.setItem('stride_test_config', JSON.stringify(config)); } catch (e) {}
+
       let loaded = [];
       try {
-        loaded = await loadQuestions(config);
+        loaded = resumed ? resumed.questions : await loadQuestions(config);
       } catch (e) {
         console.error(e);
         html.style.visibility = 'visible';
@@ -648,16 +801,23 @@
 
       questions = loaded;
       startedAt = Date.now();
-
-      if (config.mode === 'timed') {
-        if (config.time && config.time > 0) startTimer(config.time);
-      } else if (config.mode === 'mock') {
-        startTimer(config.time || 120);
+      if (resumed) {
+        answers = resumed.answers || {}; flags = resumed.flags || {}; customExp = resumed.customExp || {};
+        currentIndex = Math.min(resumed.idx || 0, questions.length - 1); startedAt = resumed.startedAt || startedAt;
       }
 
       html.style.visibility = 'visible';
       $('#nav-bar').hidden = false;
+      $('#grid-btn').hidden = false;
       renderQuestion();
+      if (resumed) toast('Welcome back — your progress was restored.');
+
+      if (config.mode === 'timed') {
+        if (config.time && config.time > 0) startTimer(config.time, resumed && resumed.endsAt);
+      } else if (config.mode === 'mock') {
+        startTimer(config.time || 120, resumed && resumed.endsAt);
+      }
+      saveProgress();
       icons();
     }
 

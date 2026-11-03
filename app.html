@@ -498,6 +498,45 @@
     #announce .top-header { margin-bottom: 20px; }
     .nav-item { position: relative; }
     .nav-item.dot::before { content: ''; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--orange); }
+  
+    /* ---- v2 additions ---- */
+    .streak-num.glow-up { animation: numBump .9s cubic-bezier(.2,.9,.3,1.5), numGlow 3.2s ease-out both; }
+    @keyframes numGlow {
+      0%   { text-shadow: 0 0 0 rgba(255,140,50,0); }
+      25%  { text-shadow: 0 0 22px rgba(255,150,60,.95), 0 0 60px rgba(255,110,30,.75), 0 0 110px rgba(255,90,20,.5); color: #FFE3BD; }
+      100% { text-shadow: 0 0 0 rgba(255,140,50,0); }
+    }
+    .resume-banner { background: rgba(141,185,234,.12); border-color: rgba(141,185,234,.4); animation: slideDown .5s var(--ease) both; }
+    .resume-banner .tb-ic { background: var(--blue); color: #06223d; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+    .goal { margin-top: 16px; position: relative; overflow: hidden; }
+    .goal-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+    .goal-days { font-size: 3.4rem; font-weight: 500; letter-spacing: -.05em; line-height: .9; font-variant-numeric: tabular-nums; }
+    .goal-days small { display: block; font-size: .78rem; font-weight: 400; letter-spacing: 0; color: var(--muted); margin-top: 6px; }
+    .goal-chip { padding: 6px 12px; border-radius: 999px; font-size: .75rem; border: 1px solid var(--line); color: var(--muted); background: none; }
+    .goal-row { margin-top: 16px; }
+    .goal-row .gl { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 7px; }
+    .goal-row .gl span:last-child { color: var(--muted); }
+    .gbar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .gbar > div { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--orange), var(--yellow)); transform-origin: left; animation: gGrow 1s var(--ease) both; }
+    .gbar.blue > div { background: linear-gradient(90deg, #4f9fd6, var(--blue)); }
+    @keyframes gGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .drill-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .drill-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; text-align: left; padding: 16px; border-radius: 24px; border: 1px solid var(--line); background: rgba(255,255,255,.03); transition: transform .25s var(--ease), border-color .2s, background .2s; }
+    .drill-btn:active { transform: scale(.97); }
+    .drill-btn:hover { border-color: rgba(255,255,255,.4); background: rgba(255,255,255,.06); }
+    .drill-btn svg { color: var(--orange); }
+    .drill-btn b { display: block; font-weight: 500; font-size: .92rem; }
+    .drill-btn small { display: block; color: var(--muted); font-size: .76rem; margin-top: 3px; line-height: 1.35; }
+    .tc-field { width: 100%; height: 52px; padding: 0 18px; border-radius: 26px; background: rgba(255,255,255,.06); border: 1px solid var(--line); color: #fff; font-size: 1rem; margin-top: 10px; }
+    .tc-field option { color: #000; }
+    .card, .panel { transition: transform .35s var(--ease), border-color .25s; }
+    .card:active { transform: scale(.985); }
+    @media (prefers-reduced-motion: reduce) { .streak-num.glow-up, .resume-banner, .gbar > div { animation: none !important; } }
+    
+    /* Calendar Heatmap */
+    #activity-calendar { overflow-x: auto; padding-bottom: 10px; min-height: 100px; scrollbar-width: none; display: flex; flex-direction: column; align-items: flex-start; }
+    #activity-calendar::-webkit-scrollbar { display: none; }
   </style>
   <script>
     if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
@@ -543,6 +582,8 @@
         <span class="tb-text" id="tb-text"></span>
         <span class="tb-cta" id="tb-cta">Upgrade</span>
       </button>
+
+      <div id="resume-slot"></div>
 
       <div class="filter-pills stagger" id="pills" style="--i:1">
         <button class="pill active" data-filter="all">All <span class="count">0</span></button>
@@ -591,7 +632,7 @@
         <article class="card wide c-green stagger" data-id="mock" data-cat="exams" style="--i:6" onclick="startFullMock()">
           <div class="badge"><i data-lucide="target"></i></div>
           <div class="text">
-            <p class="eyebrow-dark">80 Qs &bull; 40 Mins</p>
+            <p class="eyebrow-dark">120 Qs &bull; 60 Mins</p>
             <h3>Take a Full Mock</h3>
           </div>
         </article>
@@ -599,19 +640,16 @@
 
       <p class="empty" id="empty" hidden>Nothing here yet.<br/>Tap the heart on a card to save it.</p>
       
+      <div id="goal-slot" class="stagger" style="--i:6"></div>
       <div id="read-today" class="stagger" style="--i:7; margin-top:16px"></div>
       <div id="leaderboard"></div>
     </section>
 
-    <!-- NEW NOTES PAGE -->
     <section id="notes" class="page">
       <header class="top-header">
         <h1>Notes</h1>
       </header>
-      
-      <div id="notes-content" class="stagger" style="--i:0">
-        <!-- Rendered dynamically -->
-      </div>
+      <div id="notes-content" class="stagger" style="--i:0"></div>
     </section>
 
     <section id="announce" class="page">
@@ -621,6 +659,14 @@
 
     <section id="practice" class="page">
       <header class="top-header"><h1>Practice</h1></header>
+
+      <div class="panel stagger" style="--i:0;margin-bottom:14px">
+        <div class="panel-head"><h3>Quick drills</h3><small>smart sessions</small></div>
+        <div class="drill-row">
+          <button class="drill-btn" id="drill-weak"><i data-lucide="target"></i><span><b>Weak-area drill</b><small id="drill-weak-sub">Take a test first</small></span></button>
+          <button class="drill-btn" id="drill-miss"><i data-lucide="rotate-ccw"></i><span><b>Missed questions</b><small id="drill-miss-sub">0 saved</small></span></button>
+        </div>
+      </div>
 
       <div class="panel stagger" style="--i:0">
         <div class="panel-head"><h3>Subjects</h3><span style="display:flex;align-items:center;gap:12px"><small id="course-label">Your course</small><button type="button" id="all-subj-btn" style="background:none;border:0;padding:0;color:var(--orange);font:inherit;font-size:.78rem;font-weight:600;cursor:pointer">Show all</button></span></div>
@@ -688,6 +734,11 @@
       <header class="top-header"><h1>Analytics</h1></header>
 
       <div class="panel stagger" style="--i:0">
+        <div class="panel-head"><h3>JAMB Countdown</h3><small>days remaining</small></div>
+        <div id="activity-calendar"></div>
+      </div>
+
+      <div class="panel stagger" style="--i:0">
         <div class="ring-wrap">
           <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
             <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
@@ -711,6 +762,7 @@
       <div class="panel stagger" style="--i:2">
         <div class="panel-head"><h3>Focus areas</h3><small>lowest scores</small></div>
         <div id="focus-list"></div>
+        <button class="start-btn" id="drill-weak-2" style="margin:14px 0 0">Drill my weak areas</button>
       </div>
 
       <div class="panel stagger" style="--i:3">
@@ -746,6 +798,7 @@
         <div class="info">
           <div class="line"><span>Unique ID</span><span id="profile-id">STR-0000</span></div>
           <div class="line"><span>Course</span><span id="profile-course">Sciences</span></div>
+          <div class="line" id="goal-line" style="cursor:pointer"><span>Target course</span><span id="profile-goal" style="color:var(--orange)">Set</span></div>
           <div class="line"><span>Member since</span><span id="profile-since">—</span></div>
           <div class="line"><span>Community</span><span id="profile-community">—</span></div>
         </div>
@@ -1199,6 +1252,7 @@
 
       // Fetch announcements
       announcements = await live('announcements', true, false, 0, true);
+      await loadConfig();
     }
 
     // Tell the admin console this student is around (at most once every 10 minutes).
@@ -1385,7 +1439,7 @@
     }
 
     function renderHome() {
-      renderReadToday(); renderLeaderboard();
+      renderReadToday(); renderLeaderboard(); renderGoal(); renderResume(); renderDrills();
       const h = new Date().getHours();
       $('#greet-hi').textContent = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
       
@@ -1433,7 +1487,7 @@
       const sc = $('#streak-card');
       sc.classList.toggle('lit', doneToday);
       $('#streak-sub-t').textContent = doneToday ? 'locked in today' : (streak ? 'take a test to keep it alive' : 'take a test to start');
-      if (pop) { sc.classList.remove('celebrate'); void sc.offsetWidth; sc.classList.add('celebrate'); numEl.classList.remove('bump'); void numEl.offsetWidth; numEl.classList.add('bump'); burstSparks(sc); }
+      if (pop) { sc.classList.remove('celebrate'); void sc.offsetWidth; sc.classList.add('celebrate'); numEl.classList.remove('bump', 'glow-up'); void numEl.offsetWidth; numEl.classList.add('bump', 'glow-up'); burstSparks(sc); setTimeout(() => numEl.classList.remove('glow-up'), 3300); }
 
       // current Mon–Sun week, lit for every day inside the streak run
       const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -1506,16 +1560,135 @@
       el.innerHTML = `<div class="panel"><p class="eyebrow">Read for today</p><h3>${escH(dailyNotes[0].title)}</h3><p style="font-size:.8rem;color:var(--muted);margin-top:4px">${more}${more && !unread ? ', ' : ''}${unread ? '' : 'all read'}</p><button class="start-btn" id="rt-read" style="margin:12px 0 0">Open notes</button></div>`;
       $('#rt-read').onclick = () => goTo('notes');
     }
+
+    /* ===================== v2: config, goals, drills, resume ===================== */
+    let appCfg = {}, cfgAt = 0;
+    async function loadConfig() {
+      try {
+        const { data, error } = await supabase.rpc('stride_config');
+        if (!error && data && typeof data === 'object') appCfg = data;
+      } catch (e) {}
+      cfgAt = Date.now();
+      syncTarget();
+    }
+    const COURSES = { 'Medicine & Surgery': 300, 'Dentistry': 290, 'Law': 280, 'Pharmacy': 280, 'Nursing': 270, 'Medical Lab Science': 270, 'Computer Science': 260, 'Software Engineering': 260, 'Electrical Engineering': 260, 'Chemical Engineering': 255, 'Mechanical Engineering': 255, 'Civil Engineering': 250, 'Architecture': 250, 'Mass Communication': 250, 'Accounting': 240, 'Economics': 240, 'Biochemistry': 240, 'Psychology': 240, 'Banking & Finance': 230, 'Business Administration': 230, 'Political Science': 230, 'Microbiology': 230, 'English': 220, 'Education': 200, 'Agriculture': 200, 'Other': 200 };
+    const goalKey = () => 'stride_goal_' + currentUser.id;
+    function getGoal() {
+      if (dbProfile && dbProfile.target_course) return { course: dbProfile.target_course };
+      try { return JSON.parse(localStorage.getItem(goalKey()) || 'null'); } catch (e) { return null; }
+    }
+    function targetInfo() {
+      const g = getGoal();
+      if (g && COURSES[g.course]) return { score: COURSES[g.course], label: g.course + ' (typical cut-off)' };
+      const a = +appCfg.cfg_target_score;
+      if (a) return { score: a, label: 'Target score' };
+      return null;
+    }
+    function syncTarget() { try { const ti = targetInfo(); if (ti) localStorage.setItem('stride_target', String(ti.score)); else localStorage.removeItem('stride_target'); } catch (e) {} }
+    function openGoalPrompt() {
+      const g = getGoal() || {};
+      openModal({
+        title: 'What are you aiming for?',
+        body: `<p style="color:var(--muted);font-size:.88rem;line-height:1.45">Pick your target course so we can track your score against the typical JAMB cut-off.</p>
+          <select id="tc-course" class="tc-field"><option value="">Choose a course</option>${Object.keys(COURSES).map(c => `<option ${g.course === c ? 'selected' : ''}>${c}</option>`).join('')}</select>`,
+        actions: [
+          { label: 'Later', style: 'ghost', onClick: () => { try { localStorage.setItem('stride_goal_snooze', String(Date.now() + 864e5)); } catch (e) {} } },
+          { label: 'Save', style: 'primary', close: false, onClick: async () => {
+              const course = $('#tc-course').value;
+              if (!course) return toast('Choose a course first.');
+              try { localStorage.setItem(goalKey(), JSON.stringify({ course })); } catch (e) {}
+              dbProfile.target_course = course;
+              supabase.from('profiles').update({ target_course: course }).eq('id', currentUser.id).then(() => {}, () => {});
+              syncTarget(); closeModal(); renderGoal(); toast('Target saved 🎯');
+          } }
+        ]
+      });
+    }
+    function maybePromptGoal() {
+      if (getGoal()) return;
+      try { if (+localStorage.getItem('stride_goal_snooze') > Date.now()) return; } catch (e) {}
+      setTimeout(() => { if (!getGoal()) openGoalPrompt(); }, html.classList.contains('no-intro') ? 900 : 3600);
+    }
+    function weeklyTests() {
+      const now = new Date(); const mon = new Date(now); mon.setHours(0, 0, 0, 0); mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+      return dbTests.filter(x => new Date(x.date) >= mon).length;
+    }
+    function myLevel() {
+      const r = dbTests.slice(0, 10).filter(x => x.total);
+      if (!r.length) return 0;
+      return Math.round(r.reduce((a, x) => a + x.score / x.total, 0) / r.length * 400);
+    }
+    function renderGoal() {
+      const el = $('#goal-slot'); if (!el) return;
+      const gl = $('#profile-goal'); const g = getGoal(); if (gl) gl.textContent = g ? g.course : 'Set';
+      const ti = targetInfo(), exam = appCfg.cfg_exam_date, wk = +appCfg.cfg_weekly_goal || 0;
+      let days = null;
+      if (exam) { const d = new Date(exam + 'T00:00:00'); if (!isNaN(d)) days = Math.ceil((d - new Date().setHours(0, 0, 0, 0)) / 864e5); }
+      if (days === null && !ti && !wk) { el.innerHTML = '<button class="trial-banner" id="goal-set" style="margin-top:16px"><span class="tb-ic"><i data-lucide="target"></i></span><span class="tb-text">Set your target course</span><span class="tb-cta">Set</span></button>'; $('#goal-set').onclick = openGoalPrompt; icons(); return; }
+      const lvl = myLevel();
+      const examName = escH(appCfg.cfg_exam_name || 'your exam');
+      const daysHtml = days === null ? '' : days > 0 ? `<div class="goal-days">${days}<small>day${days === 1 ? '' : 's'} to ${examName}</small></div>` : days === 0 ? `<div class="goal-days" style="font-size:2rem">Today!<small>${examName}</small></div>` : '';
+      const tgtRow = ti ? `<div class="goal-row"><div class="gl"><span>Level ≈ ${lvl} / 400</span><span>${escH(ti.label)}: ${ti.score}</span></div><div class="gbar blue"><div style="width:${Math.min(100, Math.round(lvl / ti.score * 100))}%"></div></div></div>` : '';
+      const wkRow = wk ? (() => { const n = weeklyTests(); return `<div class="goal-row"><div class="gl"><span>Weekly goal</span><span>${Math.min(n, wk)} of ${wk} tests${n >= wk ? ' ✓' : ''}</span></div><div class="gbar"><div style="width:${Math.min(100, Math.round(n / wk * 100))}%"></div></div></div>`; })() : '';
+      el.innerHTML = `<div class="panel goal"><div class="goal-top">${daysHtml || '<h3>Your goals</h3>'}<button class="goal-chip" id="goal-edit">${g ? 'Edit target' : 'Set target'}</button></div>${tgtRow}${wkRow}</div>`;
+      $('#goal-edit').onclick = openGoalPrompt;
+    }
+    function renderResume() {
+      const slot = $('#resume-slot'); if (!slot) return;
+      let r = null; try { r = JSON.parse(localStorage.getItem('stride_test_resume') || 'null'); } catch (e) {}
+      if (!r || r.uid !== currentUser.id || Date.now() - r.ts > 864e5 || !r.questions) { slot.innerHTML = ''; return; }
+      slot.innerHTML = `<button class="trial-banner resume-banner" id="resume-btn"><span class="tb-ic"><i data-lucide="play"></i></span><span class="tb-text">Resume your ${r.cfg.retry ? 'retry' : r.cfg.mode} test · ${Object.keys(r.answers || {}).length} of ${r.questions.length} answered</span><span class="tb-cta">Resume</span></button>`;
+      $('#resume-btn').onclick = () => { try { localStorage.setItem('stride_test_config', JSON.stringify(r.cfg)); } catch (e) {} location.href = 'test.html'; };
+      icons();
+    }
+    const getMistakes = () => { try { return JSON.parse(localStorage.getItem('stride_mistakes_' + currentUser.id) || '[]'); } catch (e) { return []; } };
+    function weakSubjects() {
+      const map = {};
+      dbTests.forEach(x => { if (!x.subject || !x.total) return; (map[x.subject] = map[x.subject] || { s: 0, t: 0 }); map[x.subject].s += x.score; map[x.subject].t += x.total; });
+      return Object.keys(map).sort((a, b) => map[a].s / map[a].t - map[b].s / map[b].t).slice(0, 2);
+    }
+    function renderDrills() {
+      const w = weakSubjects(), m = getMistakes().length;
+      const ws = $('#drill-weak-sub'), ms = $('#drill-miss-sub');
+      if (ws) ws.textContent = w.length ? w.join(' + ') + ' · 20 Qs' : 'Take a test first';
+      if (ms) ms.textContent = m ? m + ' saved to retry' : 'Nothing missed yet';
+    }
+    function drillWeak() {
+      if (!requireAccess()) return;
+      const w = weakSubjects();
+      if (!w.length) return toast('Take a few tests first so we can find your weak areas.');
+      startTest({ subjects: w, year: 'all', count: 20, difficulty: practice.diff || 'medium', mode: 'practice', time: 0 });
+    }
+    $('#drill-weak').addEventListener('click', drillWeak);
+    $('#drill-weak-2').addEventListener('click', drillWeak);
+    $('#drill-miss').addEventListener('click', () => {
+      if (!requireAccess()) return;
+      if (!getMistakes().length) return toast('No missed questions yet. Finish a test first.');
+      startTest({ retry: true, mode: 'practice', subjects: ['Mistakes'], year: 'all', count: 20 });
+    });
+    $('#goal-line').addEventListener('click', openGoalPrompt);
+    setInterval(() => { if (!document.hidden && currentUser && Date.now() - cfgAt > 3e5) refreshCfg(); }, 6e4);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && currentUser && Date.now() - cfgAt > 12e4) refreshCfg(); });
+    async function refreshCfg() { await loadConfig(); renderGoal(); lbAt = 0; renderLeaderboard(); scheduleReminder(); }
+
     let lbAt = 0, lbData = null;
     async function renderLeaderboard() {
       const el = $('#leaderboard'); if (!el) return;
-      if (!lbData || Date.now() - lbAt > 60000) {
-        const { data } = await supabase.rpc('leaderboard');
-        lbData = data || []; lbAt = Date.now();
+      const period = appCfg.cfg_lb_period || 'week', subj = appCfg.cfg_lb_subject || 'all', grp = appCfg.cfg_lb_group || 'everyone';
+      const sig = [period, subj, grp].join('|');
+      if (!lbData || lbData.sig !== sig || Date.now() - lbAt > 60000) {
+        const days = period === 'month' ? 30 : period === 'all' ? 0 : 7;
+        const aud = String((dbProfile && dbProfile.course) || 'Sciences').toLowerCase().split(/[\s,/-]+/)[0];
+        let res = await supabase.rpc('leaderboard_v2', { p_days: days, p_subject: subj === 'all' ? null : subj, p_course: grp === 'course' ? aud : null });
+        if (res.error) res = await supabase.rpc('leaderboard');
+        lbData = { sig, rows: res.data || [] }; lbAt = Date.now();
       }
-      if (!lbData.length) { el.innerHTML = ''; return; }
-      el.innerHTML = '<div class="panel" style="margin-top:16px"><div class="panel-head"><h3>Leaderboard</h3><small>Last 7 days</small></div>' +
-        lbData.map((r, i) => `<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(255,255,255,.06);${r.id === currentUser.id ? 'color:var(--orange);' : ''}"><span>${i + 1}. ${escH(r.name || 'Student')}</span><span>${r.score} pts</span></div>`).join('') + '</div>';
+      const rows = lbData.rows;
+      if (!rows.length) { el.innerHTML = ''; return; }
+      const label = (period === 'month' ? 'Last 30 days' : period === 'all' ? 'All time' : 'Last 7 days') + (subj !== 'all' ? ' · ' + subj : '') + (grp === 'course' ? ' · My course' : '');
+      const medal = i => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+      el.innerHTML = `<div class="panel" style="margin-top:16px"><div class="panel-head"><h3>${escH(appCfg.cfg_lb_title || 'Leaderboard')}</h3><small>${escH(label)}</small></div>` +
+        rows.map((r, i) => `<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(255,255,255,.06);animation:slideDown .5s ${i * 50}ms var(--ease) both;${r.id === currentUser.id ? 'color:var(--orange);' : ''}"><span>${medal(i)} ${escH(r.name || 'Student')}</span><span>${r.score} pts</span></div>`).join('') + '</div>';
     }
     const seenAnn = () => { try { return JSON.parse(localStorage.getItem('stride_seen_ann') || '[]'); } catch (e) { return []; } };
     function markAnnSeen() { try { localStorage.setItem('stride_seen_ann', JSON.stringify(announcements.map(a => a.id))); } catch (e) {} updateAnnDot(); }
@@ -1685,10 +1858,10 @@
       startTest({
         subjects: coreSubjects,
         year: 'all',
-        count: 80,
+        count: 120,
         difficulty: 'medium',
         mode: 'mock',
-        time: 40
+        time: 60
       });
     };
 
@@ -1910,6 +2083,8 @@
     });
 
     window.startTest = (cfg) => {
+      cfg.sid = cfg.sid || ('s' + Date.now());
+      try { localStorage.removeItem('stride_test_resume'); } catch (e) {}
       localStorage.setItem('stride_test_config', JSON.stringify(cfg));
       location.href = 'test.html';
     };
@@ -1926,6 +2101,8 @@
       if (practice.mode === 'mock') {
         subjs = subjects.slice(0, 4);
         yr = getValidYear(subjs, practice.year);
+        count = 120;
+        time = 60;
       } else if (practice.mode === 'timed') {
         if (!subjs.length) return toast('Pick at least one subject first.');
         if (subjs.length > 4) subjs = subjs.slice(0, 4);
@@ -1985,7 +2162,86 @@
       return { overall, best, questions: totalMax, map, focus: ordered.slice(0, 3), strong: ordered.reverse().slice(0, 3) };
     }
 
+    function renderJambCalendar() {
+      const el = $('#activity-calendar');
+      if (!el) return;
+
+      let examDateStr = appCfg.cfg_exam_date;
+      if (!examDateStr) {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        examDateStr = `${currentYear}-04-20`;
+        const defaultExam = new Date(examDateStr + 'T00:00:00');
+        if (defaultExam < today) examDateStr = `${currentYear + 1}-04-20`;
+      }
+      
+      const examDate = new Date(examDateStr + 'T00:00:00');
+      const today = new Date();
+      today.setHours(0,0,0,0);
+
+      const daysLeft = Math.ceil((examDate - today) / 864e5);
+      
+      const startDate = new Date(today);
+      startDate.setDate(today.getDate() - 15 * 7 - 6); 
+      
+      const endDate = new Date(examDate);
+      endDate.setDate(examDate.getDate() + (6 - (examDate.getDay() + 6) % 7));
+
+      const numWeeks = Math.ceil((endDate - startDate) / (7 * 864e5));
+
+      let html = '';
+      
+      html += `<div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; font-weight: 500;">
+        ${daysLeft > 0 ? `${daysLeft} days left` : daysLeft === 0 ? `Today is the day!` : `Exam passed`} &bull; ${examDate.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+      </div>`;
+
+      html += '<div style="display: flex; margin-left: 28px; font-size: 0.65rem; color: var(--muted); margin-bottom: 4px;">';
+      let curMonth = -1;
+      for (let w = 0; w < numWeeks; w++) {
+        const d = new Date(startDate);
+        d.setDate(startDate.getDate() + w * 7);
+        if (d.getMonth() !== curMonth) {
+          curMonth = d.getMonth();
+          html += `<span style="flex: 1; min-width: 16px;">${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][curMonth]}</span>`;
+        } else {
+          html += `<span style="flex: 1; min-width: 16px;"></span>`;
+        }
+      }
+      html += '</div>';
+
+      html += '<div style="display: flex; gap: 4px;">';
+      html += '<div style="display: flex; flex-direction: column; gap: 4px; font-size: 0.65rem; color: var(--muted); margin-right: 4px;">';
+      html += '<span style="height: 12px; line-height: 12px;">Mon</span>';
+      html += '<span style="height: 12px; line-height: 12px;"></span>';
+      html += '<span style="height: 12px; line-height: 12px;">Wed</span>';
+      html += '<span style="height: 12px; line-height: 12px;"></span>';
+      html += '<span style="height: 12px; line-height: 12px;">Fri</span>';
+      html += '<span style="height: 12px; line-height: 12px;"></span>';
+      html += '<span style="height: 12px; line-height: 12px;"></span>';
+      html += '</div>';
+
+      html += `<div style="display: grid; grid-template-rows: repeat(7, 12px); grid-auto-flow: column; grid-auto-columns: 12px; gap: 4px;">`;
+      for (let w = 0; w < numWeeks; w++) {
+        for (let d = 0; d < 7; d++) {
+          const cellDate = new Date(startDate);
+          cellDate.setDate(startDate.getDate() + w * 7 + d);
+          
+          let color = 'rgba(255,255,255,0.05)';
+          if (cellDate > examDate) color = 'transparent';
+          else if (cellDate < today) color = 'var(--orange)';
+          else if (cellDate.getTime() === today.getTime()) color = 'var(--yellow)';
+          
+          html += `<div title="${cellDate.toDateString()}" style="width: 12px; height: 12px; border-radius: 2px; background: ${color};"></div>`;
+        }
+      }
+      html += '</div>';
+      html += '</div>';
+
+      el.innerHTML = html;
+    }
+
     function renderAnalytics() {
+      renderJambCalendar();
       const a = buildAnalytics();
       $('#stat-tests').textContent = dbTests.length;
       $('#stat-questions').textContent = a.questions;
@@ -2176,13 +2432,13 @@
     // ---------- Notifications ----------
     // Optional real background push (works even when the app is closed): create a free
     // OneSignal app, paste its App ID here. Leave empty to use local reminders only.
-    const ONESIGNAL_APP_ID = '';
+    const ONESIGNAL_APP_ID = '666ab3cc-b164-41b0-9d2e-7cc81d77c1b9';
     if (ONESIGNAL_APP_ID) {
       const os = document.createElement('script');
       os.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js'; os.defer = true;
       document.head.appendChild(os);
       window.OneSignalDeferred = window.OneSignalDeferred || [];
-      OneSignalDeferred.push(async OneSignal => { await OneSignal.init({ appId: ONESIGNAL_APP_ID, serviceWorkerPath: 'sw.js' }); });
+      OneSignalDeferred.push(async OneSignal => { await OneSignal.init({ appId: ONESIGNAL_APP_ID, serviceWorkerPath: 'sw.js' }); window.__os = OneSignal; osLink(); });
     }
     async function showNote(title, body, tag) {
       try {
@@ -2197,15 +2453,17 @@
       $('#notif-btn').classList.toggle('notif-on', on);
       $('#notif-sub').textContent = st === 'denied' ? 'Allow notifications in browser settings' : 'Daily streak reminders';
     }
+    function osLink() { try { if (window.__os && currentUser) { window.__os.login(currentUser.id); window.__os.User.addTag('course', String((dbProfile && dbProfile.course) || '')); } } catch (e) {} }
     let reminderTimer;
     function scheduleReminder() {
       clearTimeout(reminderTimer);
       if (notifState() !== 'granted' || localStorage.getItem('stride_notif') === 'off') return;
       if (dbProfile.last_login_date === ymd(new Date())) return;      // already studied today
-      const t = new Date(); t.setHours(19, 0, 0, 0);                    // 7 PM local
+      const rh = appCfg.cfg_remind_hour; const hr = (rh === undefined || rh === '' || isNaN(+rh)) ? 19 : Math.min(23, Math.max(0, +rh));
+      const t = new Date(); t.setHours(hr, 0, 0, 0);                    // admin-set hour (default 7 PM)
       let ms = t - Date.now(); if (ms < 0) ms = 60 * 1000;               // past 7pm: nudge in a minute
       reminderTimer = setTimeout(() => {
-        if (dbProfile.last_login_date !== ymd(new Date())) showNote('Your streak is on the line 🔥', 'Take a quick test to keep your ' + effStreak() + '-day streak alive.', 'streak');
+        if (dbProfile.last_login_date !== ymd(new Date())) showNote(appCfg.cfg_remind_title || 'Your streak is on the line 🔥', appCfg.cfg_remind_text || ('Take a quick test to keep your ' + effStreak() + '-day streak alive.'), 'streak');
       }, ms);
     }
     $('#notif-btn').addEventListener('click', async () => {
@@ -2233,6 +2491,8 @@
       renderAnalytics();
       renderProfile();
       icons();
+      osLink();
+      if (!window.__goalAsked) { window.__goalAsked = true; maybePromptGoal(); }
     }
 
     initApp().then(() => {
