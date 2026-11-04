@@ -1,6 +1,6 @@
 /* Stride service worker */
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-const VERSION = 'stride-v5';
+const VERSION = 'stride-v6';
 
 // Only list files that ACTUALLY exist. Anything missing here breaks install.
 const SHELL = [
@@ -74,7 +74,7 @@ self.addEventListener('push', e => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) { d = { body: e.data && e.data.text() }; }
   e.waitUntil(self.registration.showNotification(d.title || 'Stride', {
-    body: d.body || 'Time to keep your streak alive 🔥',
+    body: d.body || 'Time to keep your streak alive',
     icon: 'icons/icon-192.png',
     badge: 'icons/icon-192.png',
     tag: d.tag || 'stride',
@@ -91,4 +91,14 @@ self.addEventListener('notificationclick', e => {
       return clients.openWindow(target);
     })
   );
+});
+
+// In-memory question cache (per SW lifetime). test.html also keeps a localStorage fallback.
+const Q_CACHE = new Map();
+self.addEventListener('message', e => {
+  const d = e.data || {};
+  const port = e.ports && e.ports[0];
+  if (d.type === 'cacheQuestion') { Q_CACHE.set(d.key, d.data); if (port) port.postMessage({ ok: true }); }
+  else if (d.type === 'getQuestion') { const found = Q_CACHE.has(d.key); if (port) port.postMessage({ found, data: found ? Q_CACHE.get(d.key) : null }); }
+  else if (d.type === 'clearQuestions') { Q_CACHE.clear(); if (port) port.postMessage({ ok: true }); }
 });

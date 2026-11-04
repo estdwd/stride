@@ -315,6 +315,8 @@
     let flags = {};
     let customExp = {};
     let endsAt = 0;
+    let questionStart = 0;
+    let questionTimes = {};
     const RK = 'stride_test_resume';
     const MK = () => 'stride_mistakes_' + (currentUser ? currentUser.id : 'x');
     function getMistakes() { try { return JSON.parse(localStorage.getItem(MK()) || '[]'); } catch (e) { return []; } }
@@ -415,23 +417,56 @@
     }
     function stopTimer() { clearInterval(timerInterval); }
 
+    // Offline question cache: service worker (in-memory) with a localStorage fallback.
+    function swAsk(msg) {
+      return new Promise(resolve => {
+        try {
+          const ctl = navigator.serviceWorker && navigator.serviceWorker.controller;
+          if (!ctl) return resolve(null);
+          const ch = new MessageChannel();
+          const t = setTimeout(() => resolve(null), 800);
+          ch.port1.onmessage = e => { clearTimeout(t); resolve(e.data); };
+          ctl.postMessage(msg, [ch.port2]);
+        } catch (e) { resolve(null); }
+      });
+    }
+    async function cacheGet(key) {
+      const r = await swAsk({ type: 'getQuestion', key });
+      if (r && r.found) return r.data;
+      try { const v = JSON.parse(localStorage.getItem(key) || 'null'); if (v) return v; } catch (e) {}
+      return null;
+    }
+    async function cachePut(key, data) {
+      swAsk({ type: 'cacheQuestion', key, data });
+      try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) {}
+    }
+
     async function loadQuestions(cfg) {
       if (cfg.retry) {
-        const m = getMistakes().slice(0, cfg.count || 20);
+        const m = getMistakes().filter(x => !cfg.dueOnly || !x.due || x.due <= Date.now()).slice(0, cfg.count || 20);
         return m.map(x => ({ ...x }));
       }
       if (Array.isArray(cfg.custom) && cfg.custom.length) {
         cfg.custom.forEach((c, i) => { if (c.explanation) customExp['n' + i] = c.explanation; });
         return cfg.custom.map(({ answer, explanation, ...q }, i) => ({ id: 'n' + i, subject: cfg.subjects[0], year: null, difficulty: 'medium', section: null, image_url: null, ...q }));
       }
-      const { data, error } = await supabase.rpc('pick_questions', {
-        p_subjects: cfg.subjects,
-        p_year: String(cfg.year || 'all'),
-        p_count: cfg.count,
-        p_difficulty: cfg.difficulty || 'medium'
-      });
-      if (error) throw error;
-      return data || [];
+      const cacheKey = 'qs_' + btoa(JSON.stringify({ s: cfg.subjects, y: cfg.year || 'all', c: cfg.count, d: cfg.difficulty || 'medium' }));
+      try {
+        const { data, error } = await supabase.rpc('pick_questions', {
+          p_subjects: cfg.subjects,
+          p_year: String(cfg.year || 'all'),
+          p_count: cfg.count,
+          p_difficulty: cfg.difficulty || 'medium'
+        });
+        if (error) throw error;
+        if (data && data.length) cachePut(cacheKey, data);
+        return data || [];
+      } catch (e) {
+        const hit = await cacheGet(cacheKey);
+        if (hit && hit.length) { toast('Offline — using saved questions.'); return hit; }
+        if (!navigator.onLine) { const err = new Error('offline'); err.offline = true; throw err; }
+        throw e;
+      }
     }
 
     function renderQuestion() {
@@ -450,9 +485,10 @@
         `<span class="q-chip sub">${escapeHtml(q.subject)}</span>`,
         q.year ? `<span class="q-chip">${q.year}</span>` : '',
         q.difficulty ? `<span class="q-chip diff ${q.difficulty}">${q.difficulty}</span>` : '',
-        `<button class="q-chip flagbtn ${flags[q.id] ? 'on' : ''}" id="flag-btn">⚑ ${flags[q.id] ? 'Flagged' : 'Flag'}</button>`
+        `<button class="q-chip flagbtn ${flags[q.id] ? 'on' : ''}" id="flag-btn"><i data-lucide="flag" style="width:12px;height:12px;vertical-align:-1px"></i> ${flags[q.id] ? 'Flagged' : 'Flag'}</button>`
       ].filter(Boolean).join('');
 
+      questionStart = Date.now();
       const chosen = answers[q.id];
       const opts = ['a', 'b', 'c', 'd'].map(k => {
         const txt = q['option_' + k];
@@ -483,6 +519,7 @@
 
       $$('.opt').forEach(btn => {
         btn.addEventListener('click', () => {
+          if (!answers[q.id]) questionTimes[q.id] = Math.max(0, Date.now() - (questionStart || Date.now())) / 1000;
           answers[q.id] = btn.dataset.key;
           saveProgress();
           renderQuestion();
@@ -600,7 +637,7 @@
         bySubject[sub].total++;
         const isCorrect = !!g.is_correct;
         if (isCorrect) { correct++; bySubject[sub].score++; }
-        review.push({ q: q.question, chosen: answers[q.id] || null, correct: g.correct || null, isCorrect, exp: expMap[q.id] || '', subject: sub, flagged: !!flags[q.id] });
+        review.push({ t: questionTimes[q.id] != null ? questionTimes[q.id] : null, q: q.question, chosen: answers[q.id] || null, correct: g.correct || null, isCorrect, exp: expMap[q.id] || '', subject: sub, flagged: !!flags[q.id] });
       });
 
       try { localStorage.removeItem('stride_test_config'); } catch (e) {}
@@ -613,9 +650,12 @@
         questions.forEach(q => {
           const g = byId[q.id] || {};
           if (/^n\d+$/.test(String(q.id))) return;
+          const prev = bank.find(m => String(m.id) === String(q.id));
           bank = bank.filter(m => String(m.id) !== String(q.id));
           if (!g.is_correct && g.correct) {
-            missed.push({ id: q.id, question: q.question, option_a: q.option_a, option_b: q.option_b, option_c: q.option_c, option_d: q.option_d, subject: q.subject, year: q.year, difficulty: q.difficulty, image_url: q.image_url || null, correct: g.correct, exp: expMap[q.id] || '' });
+            const miss = prev ? (prev.misses || 1) + 1 : 1;
+            const days = miss <= 1 ? 1 : miss === 2 ? 3 : 7;
+            missed.push({ misses: miss, due: Date.now() + days * 86400000, id: q.id, question: q.question, option_a: q.option_a, option_b: q.option_b, option_c: q.option_c, option_d: q.option_d, subject: q.subject, year: q.year, difficulty: q.difficulty, image_url: q.image_url || null, correct: g.correct, exp: expMap[q.id] || '' });
           }
         });
         setMistakes(missed.concat(bank));
@@ -663,7 +703,7 @@
       const avgFrac = subs.length ? subs.reduce((a, s) => a + s.score / s.total, 0) / subs.length : 0;
       const jamb = Math.round(avgFrac * 400);
       let target = 0; try { target = +localStorage.getItem('stride_target') || 0; } catch (e) {}
-      const gapTxt = target ? (jamb >= target ? `<div class="gap good">🎯 ${jamb - target} above your target of ${target}</div>` : `<div class="gap bad">${target - jamb} points to your target of ${target}</div>`) : '';
+      const gapTxt = target ? (jamb >= target ? `<div class="gap good"><i data-lucide="target" style="width:14px;height:14px;vertical-align:-2px"></i> ${jamb - target} above your target of ${target}</div>` : `<div class="gap bad">${target - jamb} points to your target of ${target}</div>`) : '';
       const jambHtml = config.retry ? '' : `<div class="jamb"><div class="k">${config.mode === 'mock' ? 'JAMB score' : 'Estimated JAMB score'}</div><div class="v"><span id="jamb-n">0</span><small> / 400</small></div>${gapTxt}</div>`;
 
       $('#main').innerHTML = `
@@ -675,8 +715,9 @@
           </div>
 
           ${jambHtml}
+          <div class="percentile" id="percentile" style="text-align:center;color:#97D86E;font-size:.9rem;margin:-4px 0 10px"></div>
 
-          ${streakInfo ? `<div class="streak-banner ${streakInfo.isNew ? 'fresh' : ''}"><span class="fl">🔥</span><div><b>${streakInfo.n}-day streak</b><small>${streakInfo.isNew ? 'Streak extended — nice work!' : 'Already counted today. Keep going!'}</small></div></div>` : ''}
+          ${streakInfo ? `<div class="streak-banner ${streakInfo.isNew ? 'fresh' : ''}"><span class="fl"><i data-lucide="flame" style="width:1.9rem;height:1.9rem;color:#EB7650"></i></span><div><b>${streakInfo.n}-day streak</b><small>${streakInfo.isNew ? 'Streak extended — nice work!' : 'Already counted today. Keep going!'}</small></div></div>` : ''}
 
           ${subjRows ? `<div class="result-breakdown"><h3>By subject</h3>${subjRows}</div>` : ''}
 
@@ -684,6 +725,7 @@
             <button class="nav-btn next" id="review-btn">
               <i data-lucide="list-checks"></i> Review answers
             </button>
+            <button class="nav-btn next" id="share-btn">Share <i data-lucide="share-2"></i></button>
             ${getMistakes().length && !config.retry ? `<button class="nav-btn prev" id="retry-btn"><i data-lucide="rotate-ccw"></i> Retry missed (${getMistakes().length})</button>` : ''}
             <button class="nav-btn prev" id="home-btn">
               <i data-lucide="home"></i> Back to app
@@ -703,9 +745,33 @@
       const countUp = (el, to, ms) => { if (!el) return; const t0 = performance.now(); const f = n => { const k = Math.min(1, (n - t0) / ms); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(f); }; requestAnimationFrame(f); };
       countUp($('#jamb-n'), jamb, 1100);
       $('#home-btn').addEventListener('click', () => location.replace('app.html'));
+
+      // history
+      try { localStorage.setItem('stride_result_' + Date.now(), JSON.stringify({ pct, jamb, total, correct, date: new Date().toISOString(), mode: config.mode })); } catch (e) {}
+
+      // share
+      $('#share-btn').addEventListener('click', async () => {
+        const text = `I scored ${pct}% (${correct}/${total}) on Stride. Estimated JAMB: ${jamb}/400.`;
+        const url = location.origin + location.pathname.replace(/[^/]*$/, '');
+        if (navigator.share) { try { await navigator.share({ text, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+        try { await navigator.clipboard.writeText(text + ' ' + url); toast('Copied to clipboard'); }
+        catch (e) { window.open('https://wa.me/?text=' + encodeURIComponent(text + ' ' + url), '_blank'); }
+      });
+
+      // percentile (leaderboard returns top 10 only, so show rank when the user is on it)
+      if (!config.retry) {
+        supabase.rpc('leaderboard_v2', { p_days: 0, p_subject: null, p_course: null }).then(({ data }) => {
+          const rows = data || [];
+          const i = rows.findIndex(r => r.id === currentUser.id);
+          const el = $('#percentile');
+          if (el && i >= 0) el.textContent = `You're #${i + 1} on the all-time leaderboard`;
+        }).catch(() => {});
+      }
     }
 
     function showReview(review, only) {
+      const ts = review.map(r => r.t).filter(t => t != null);
+      const avgT = ts.length ? ts.reduce((a, b) => a + b, 0) / ts.length : null;
       const list = review.map((r, i) => ({ r, i })).filter(x => !only || !x.r.isCorrect);
       const items = list.map(({ r, i }, n) => {
         const rowClass = r.isCorrect ? 'correct' : 'wrong';
@@ -714,14 +780,14 @@
           : 'Not answered';
         const correctTxt = r.correct ? `${r.correct.toUpperCase()} — ${escapeHtml(questions[i]['option_' + r.correct] || '')}` : '—';
         return `<div class="review-item ${rowClass}" style="animation-delay:${Math.min(n, 12) * 40}ms">
-          <div class="review-q"><b style="color:var(--muted);font-weight:400">Q${i + 1}.</b> ${escapeHtml(r.q)}${r.flagged ? ' <span style="color:#F8CB4A">⚑</span>' : ''}</div>
+          <div class="review-q"><b style="color:var(--muted);font-weight:400">Q${i + 1}.</b> ${escapeHtml(r.q)}${r.flagged ? ' <i data-lucide="flag" style="width:13px;height:13px;color:#F8CB4A;vertical-align:-2px"></i>' : ''}${r.t != null && r.t < 5 ? ' <span style="color:#F8CB4A;font-size:.75rem">rushed</span>' : ''}</div>
           <div class="review-ans">
             <div class="row"><span class="lbl">Your answer</span><span class="val ${r.isCorrect ? 'good' : 'bad'}">${yourTxt}</span></div>
             ${!r.isCorrect ? `<div class="row"><span class="lbl">Correct</span><span class="val good">${correctTxt}</span></div>` : ''}
           </div>
           ${r.exp ? `<div class="review-exp"><b>Explanation</b>${escapeHtml(r.exp)}</div>` : ''}
         </div>`;
-      }).join('') || '<p style="color:var(--muted);text-align:center;padding:30px 0">Nothing wrong here. 🎉</p>';
+      }).join('') || '<p style="color:var(--muted);text-align:center;padding:30px 0">Nothing wrong here.</p>';
 
       $('#main').innerHTML = `
         <div class="result-screen">
@@ -729,6 +795,7 @@
             <h1 style="font-size:1.6rem;font-weight:400;letter-spacing:-0.03em">Review</h1>
             <button class="back-btn" id="review-back" aria-label="Back to result"><i data-lucide="arrow-left"></i></button>
           </header>
+          ${avgT != null ? `<div style="color:var(--muted);font-size:.85rem;margin-bottom:10px">Avg time per question: ${avgT.toFixed(1)}s</div>` : ''}
           <div class="rv-tabs"><button data-f="all" class="${only ? '' : 'on'}">All</button><button data-f="wrong" class="${only ? 'on' : ''}">Wrong only</button></div>
           <div class="review-list">${items}</div>
         </div>
@@ -764,6 +831,13 @@
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { html.style.visibility = 'hidden'; return location.replace('index.html'); }
       currentUser = session.user;
+      try {
+        const bu = localStorage.getItem('stride_bound_user');
+        if (bu && bu !== currentUser.id && localStorage.getItem('stride_bound_device') === localStorage.getItem('stride_device_id') && (currentUser.email || '').toLowerCase() !== 'estdavid10@gmail.com') {
+          const { data: pr } = await supabase.from('profiles').select('role').eq('id', currentUser.id).single();
+          if (!pr || pr.role !== 'admin') { try { localStorage.setItem('stride_login_notice', 'Device bound to another account'); } catch (e) {} await supabase.auth.signOut(); return location.replace('index.html'); }
+        }
+      } catch (e) {}
 
       let raw = null;
       try { raw = localStorage.getItem('stride_test_config'); } catch (e) {}

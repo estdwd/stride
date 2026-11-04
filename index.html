@@ -132,6 +132,7 @@
     .row { display: flex; gap: 12px; }
     .row .input-group { flex: 1; min-width: 0; }
 
+    [hidden] { display: none !important; }
     .status { min-height: 1.3em; padding: 0 14px; font-size: .95rem; text-align: center; color: var(--muted); line-height: 1.4; word-break: break-word; }
     .status.err { color: var(--orange); }
     .status.ok  { color: var(--ok); }
@@ -450,6 +451,14 @@
     <button type="button" class="back-link" id="back-btn">Back</button>
   </div>
 
+  <div id="device-lock" hidden style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:24px">
+    <div style="max-width:360px;width:100%;background:#1a1a1a;border:1px solid rgba(255,255,255,.12);border-radius:28px;padding:26px;text-align:center;color:#fff">
+      <h2 style="font-size:1.35rem;font-weight:500;margin-bottom:10px">Device locked</h2>
+      <p style="color:#9a9a9a;font-size:.95rem;line-height:1.5;margin-bottom:20px">This device is bound to another account. Sign in with that account, or switch account to clear the binding.</p>
+      <button class="btn" id="switch-acct-btn" type="button"><span>Switch account (clear binding)</span></button>
+    </div>
+  </div>
+
   <script>
     // ==========================================
     // CONFIGURATION
@@ -459,6 +468,40 @@
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const SUPER_ADMIN_EMAIL = 'estdavid10@gmail.com';
+
+    // ---- Single-device login binding (client-side) ----
+    const DEVICE_KEY = 'stride_device_id';
+    const BOUND_USER_KEY = 'stride_bound_user';
+    const BOUND_DEVICE_KEY = 'stride_bound_device';
+    function getDeviceId() {
+      try {
+        let id = localStorage.getItem(DEVICE_KEY);
+        if (!id) {
+          id = (crypto.randomUUID ? crypto.randomUUID() : 'd-' + Date.now() + '-' + Math.random().toString(36).slice(2));
+          localStorage.setItem(DEVICE_KEY, id);
+        }
+        return id;
+      } catch (e) { return 'unknown'; }
+    }
+    const isSuperAdmin = email => String(email || '').toLowerCase() === SUPER_ADMIN_EMAIL;
+    async function enforceDeviceBinding(user, email) {
+      if (isSuperAdmin(email)) return true;
+      try {
+        const { data } = await sb.from('profiles').select('role').eq('id', user.id).single();
+        if (data && data.role === 'admin') return true;
+      } catch (e) {}
+      let bu = null, bd = null;
+      try { bu = localStorage.getItem(BOUND_USER_KEY); bd = localStorage.getItem(BOUND_DEVICE_KEY); } catch (e) {}
+      if (bu && bu !== user.id && bd === getDeviceId()) return false;
+      try { localStorage.setItem(BOUND_USER_KEY, user.id); localStorage.setItem(BOUND_DEVICE_KEY, getDeviceId()); } catch (e) {}
+      return true;
+    }
+    function clearDeviceBinding() {
+      try { localStorage.removeItem(BOUND_USER_KEY); localStorage.removeItem(BOUND_DEVICE_KEY); } catch (e) {}
+    }
+    function showDeviceLock() { $('device-lock').hidden = false; }
+    $('switch-acct-btn').addEventListener('click', () => { clearDeviceBinding(); $('device-lock').hidden = true; });
+    try { const n = localStorage.getItem('stride_login_notice'); if (n) { localStorage.removeItem('stride_login_notice'); showDeviceLock(); } } catch (e) {}
 
     const $ = id => document.getElementById(id);
     const actionBtn = $('action-btn');
@@ -698,13 +741,13 @@
           }
 
           if (!signUpData.session) {
-            setStatus2('Supabase still requires email confirmation. Turn off "Confirm email" in Supabase → Authentication → Providers → Email.', 'err');
+            setStatus2('Supabase still requires email confirmation. Turn off "Confirm email" in Supabase › Authentication › Providers › Email.', 'err');
             return reset();
           }
           authData = signUpData;
         } else if (authErr) {
           if (/email not confirmed/i.test(authErr.message)) {
-            setStatus2('This account was created while email confirmation was on. In Supabase, turn off "Confirm email" (Authentication → Sign In / Providers → Email), then delete this user under Authentication → Users and try again.', 'err');
+            setStatus2('This account was created while email confirmation was on. In Supabase, turn off "Confirm email" (Authentication › Sign In / Providers › Email), then delete this user under Authentication › Users and try again.', 'err');
           } else {
             setStatus2(authErr.message, 'err');
           }
@@ -732,6 +775,13 @@
           localStorage.setItem('stride_user', JSON.stringify(authData.user));
           localStorage.setItem('stride_last_active', String(Date.now()));
         } catch (e) {}
+
+        if (!(await enforceDeviceBinding(authData.user, pendingEmail))) {
+          await sb.auth.signOut();
+          setStatus2('', '');
+          showDeviceLock();
+          return reset();
+        }
 
         setStatus2('Success! Redirecting...', 'ok');
         setTimeout(() => {
@@ -876,6 +926,15 @@
           localStorage.setItem('stride_user', JSON.stringify(data.user));
           localStorage.setItem('stride_last_active', String(Date.now()));
         } catch (e) {}
+
+        if (!(await enforceDeviceBinding(data.user, email))) {
+          await sb.auth.signOut();
+          try { localStorage.removeItem('stride_user'); } catch (e) {}
+          btn.disabled = false;
+          label.textContent = 'Sign in';
+          setStatusSI('');
+          return showDeviceLock();
+        }
 
         btn.disabled = false;
         label.textContent = 'Sign in';

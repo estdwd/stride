@@ -15,14 +15,10 @@
 
   <script>
     document.documentElement.style.visibility = 'hidden';
-    const SPLASH_KEY = 'stride_last_splash';
-    const SPLASH_INTERVAL = 30 * 60 * 1000; // 30 minutes
-    const lastSplash = localStorage.getItem(SPLASH_KEY);
-    if (!lastSplash || (Date.now() - Number(lastSplash) > SPLASH_INTERVAL)) {
-      localStorage.setItem(SPLASH_KEY, Date.now());
-    } else {
-      document.documentElement.classList.add('no-intro');
-    }
+    const SPLASH_KEY = 'stride_splash_session';
+    let splashSeen = null;
+    try { splashSeen = sessionStorage.getItem(SPLASH_KEY); sessionStorage.setItem(SPLASH_KEY, '1'); } catch (e) {}
+    document.documentElement.classList.add(splashSeen ? 'no-intro' : 'has-intro');
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -394,7 +390,7 @@
     .trial-banner:active { transform: scale(.98); }
     @media (hover: hover) and (pointer: fine) { .trial-banner:hover { transform: translateY(-2px); background: rgba(29,207,159,0.18); } }
 
-    .upg { position: fixed; inset: 0; z-index: 1500; overflow-y: auto; overscroll-behavior: contain; padding: calc(22px + env(safe-area-inset-top, 0px)) 18px 48px; background: radial-gradient(70% 38% at 92% 0%, rgba(29,207,159,0.30), transparent 70%), radial-gradient(80% 45% at 0% 100%, rgba(235,118,80,0.24), transparent 70%), #020305; animation: upgIn .45s var(--ease); }
+    .upg { position: fixed; inset: 0; z-index: 1500; overflow-y: auto; overscroll-behavior: contain; padding: calc(22px + env(safe-area-inset-top, 0px)) 18px 48px; background: radial-gradient(70% 38% at 92% 0%, rgba(37,99,235,0.32), transparent 70%), radial-gradient(80% 45% at 0% 100%, rgba(235,118,80,0.24), transparent 70%), #020305; animation: upgIn .45s var(--ease); }
     .upg[hidden] { display: none; }
     @keyframes upgIn { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
     .upg-inner { max-width: 560px; margin: 0 auto; }
@@ -403,8 +399,8 @@
     .upg .panel { margin-bottom: 14px; }
 
     .pay-card { position: relative; border-radius: 34px; padding: 22px 20px 20px; color: #fff; overflow: hidden; margin-bottom: 14px;
-      background: radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,0.26), transparent 55%), radial-gradient(90% 80% at 0% 100%, rgba(0,70,52,0.95), transparent 62%), linear-gradient(145deg, #15dba5 0%, #0b9c74 48%, #066650 100%);
-      box-shadow: 0 34px 60px -26px rgba(29,207,159,0.6), inset 0 1px 0 rgba(255,255,255,0.4); animation: cardIn .7s var(--ease) backwards; }
+      background: radial-gradient(120% 90% at 100% 0%, rgba(255,255,255,0.26), transparent 55%), radial-gradient(90% 80% at 0% 100%, rgba(15,35,110,0.95), transparent 62%), linear-gradient(145deg, #2563EB 0%, #1d4ed8 48%, #1e40af 100%);
+      box-shadow: 0 34px 60px -26px rgba(37,99,235,0.6), inset 0 1px 0 rgba(255,255,255,0.4); animation: cardIn .7s var(--ease) backwards; }
     @keyframes cardIn { from { opacity: 0; transform: translateY(26px) scale(.97); } to { opacity: 1; transform: none; } }
     .pay-card::before { content: ""; position: absolute; width: 380px; height: 380px; right: -170px; top: -190px; border-radius: 50%; border: 46px solid rgba(255,255,255,0.09); }
     .pay-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(255,255,255,0.2) 1px, transparent 1.5px); background-size: 14px 14px; -webkit-mask-image: linear-gradient(135deg, #000 0%, transparent 58%); mask-image: linear-gradient(135deg, #000 0%, transparent 58%); }
@@ -422,7 +418,7 @@
     .pc-row.small b { font-size: 1.15rem; letter-spacing: .08em; }
     .pc-meta { display: flex; gap: 22px; padding: 2px 6px 14px; flex-wrap: wrap; }
     .pc-meta b { font-size: .98rem; font-weight: 500; }
-    .pc-copy { width: 44px; height: 44px; border-radius: 50%; background: #fff; color: #066650; display: grid; place-items: center; flex-shrink: 0; transition: transform .3s var(--ease); }
+    .pc-copy { width: 44px; height: 44px; border-radius: 50%; background: #fff; color: #1e40af; display: grid; place-items: center; flex-shrink: 0; transition: transform .3s var(--ease); }
     .pc-copy svg { width: 18px; height: 18px; }
     .pc-copy:active { transform: scale(.86); }
     @media (hover: hover) and (pointer: fine) { .pc-copy:hover { transform: scale(1.1); } }
@@ -518,6 +514,51 @@
     .goal-row .gl { display: flex; justify-content: space-between; font-size: .82rem; margin-bottom: 7px; }
     .goal-row .gl span:last-child { color: var(--muted); }
     .gbar { height: 8px; border-radius: 99px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .hm-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .hm-cell { aspect-ratio: 1; border-radius: 5px; background: rgba(255,255,255,.05); }
+    .hm-cell.l1 { background: rgba(235,118,80,.35); } .hm-cell.l2 { background: rgba(235,118,80,.65); } .hm-cell.l3 { background: var(--orange); }
+    .hm-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; font-size: .66rem; color: var(--muted); text-align: center; }
+    .badge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .badge-card { display: flex; gap: 10px; align-items: center; padding: 12px; border-radius: 18px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+    .badge-card svg { width: 22px; height: 22px; color: var(--yellow); flex-shrink: 0; }
+    .badge-card b { display: block; font-size: .85rem; font-weight: 500; } .badge-card small { color: var(--muted); font-size: .7rem; }
+    .badge-card.locked { opacity: .4; filter: grayscale(1); }
+    .due-banner { background: rgba(235,118,80,.12); border-color: rgba(235,118,80,.4); }
+    .due-banner .tb-ic { background: var(--orange); color: #1a0d06; }
+    :root { --payment: #2563EB; }
+    .upg .start-btn { background: var(--payment); color: #fff; }
+    /* slanted note cards */
+    .note-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 14px; padding: 8px 4px 130px; }
+    .note-slant { position: relative; min-height: 168px; padding: 16px 15px; border-radius: 28px; color: #0b0b0b; text-align: left; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; border: 0; font: inherit; box-shadow: 0 18px 30px -18px rgba(0,0,0,.7); transform: rotate(var(--rot, -2deg)); transition: transform .35s var(--ease), box-shadow .35s; animation: noteIn .55s var(--ease) backwards; animation-delay: calc(var(--n, 0) * 60ms); }
+    .note-slant:nth-child(even) { margin-top: 18px; }
+    .note-slant:active { transform: rotate(0deg) scale(.96); }
+    @media (hover: hover) and (pointer: fine) { .note-slant:hover { transform: rotate(0deg) translateY(-4px); } }
+    .note-slant h3 { font-size: 1.05rem; font-weight: 500; letter-spacing: -.02em; line-height: 1.2; }
+    .note-slant small { display: block; font-size: .72rem; opacity: .7; margin-top: 4px; }
+    .note-slant .ns-ic { width: 38px; height: 38px; border-radius: 50%; background: rgba(0,0,0,.14); display: grid; place-items: center; }
+    .note-slant .ns-ic svg { width: 18px; height: 18px; }
+    .note-slant .ns-read { position: absolute; top: 14px; right: 14px; font-size: .64rem; font-weight: 600; padding: 3px 9px; border-radius: 99px; background: rgba(0,0,0,.82); color: #fff; }
+    @keyframes noteIn { from { opacity: 0; transform: translateY(24px) rotate(0deg); } }
+    /* small UI polish */
+    .nav-item.active { box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 0 22px rgba(235,118,80,.28); }
+    .panel:active, .drill-btn:active { transform: scale(.985); }
+    html { scroll-behavior: smooth; }
+    ::-webkit-scrollbar { width: 0; height: 0; }
+    /* interactive tour */
+    #tour { position: fixed; inset: 0; z-index: 3000; pointer-events: none; }
+    #tour .t-dim { position: absolute; inset: 0; background: rgba(0,0,0,.74); opacity: 0; transition: opacity .3s; }
+    #tour.center .t-dim { opacity: 1; }
+    #tour .t-spot { position: absolute; border-radius: 22px; box-shadow: 0 0 0 9999px rgba(0,0,0,.74), 0 0 0 2px var(--orange), 0 0 28px rgba(235,118,80,.55); transition: all .35s var(--ease); pointer-events: none; animation: tourPulse 1.6s ease-in-out infinite; }
+    #tour.center .t-spot { opacity: 0; }
+    @keyframes tourPulse { 50% { box-shadow: 0 0 0 9999px rgba(0,0,0,.74), 0 0 0 4px rgba(235,118,80,.7), 0 0 38px rgba(235,118,80,.7); } }
+    #tour .t-card { position: absolute; left: 16px; right: 16px; max-width: 420px; margin: 0 auto; background: #151515; border: 1px solid rgba(255,255,255,.14); border-radius: 26px; padding: 20px 20px 16px; pointer-events: auto; box-shadow: 0 30px 60px -20px #000; animation: rise .4s var(--ease) both; }
+    #tour.center .t-card { top: 50%; transform: translateY(-50%); }
+    #tour .t-card h3 { font-size: 1.2rem; font-weight: 500; letter-spacing: -.02em; margin-bottom: 6px; }
+    #tour .t-card p { color: #b5b5b5; font-size: .92rem; line-height: 1.5; }
+    #tour .t-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; gap: 10px; }
+    #tour .t-dots { display: flex; gap: 5px; } #tour .t-dots i { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,.2); } #tour .t-dots i.on { background: var(--orange); width: 16px; border-radius: 99px; }
+    #tour .t-skip { color: var(--muted); font-size: .85rem; padding: 10px 6px; }
+    #tour .t-next { background: var(--orange); color: #1a0d06; font-weight: 600; font-size: .92rem; padding: 12px 22px; border-radius: 999px; }
     .gbar > div { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--orange), var(--yellow)); transform-origin: left; animation: gGrow 1s var(--ease) both; }
     .gbar.blue > div { background: linear-gradient(90deg, #4f9fd6, var(--blue)); }
     @keyframes gGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
@@ -543,6 +584,8 @@
   </script>
 </head>
 <body>
+
+  <div id="tour" hidden><div class="t-dim"></div><div class="t-spot"></div><div class="t-card"></div></div>
 
   <div id="splash" aria-hidden="true">
     <div class="splash-glow"></div><div class="splash-dots"></div>
@@ -584,6 +627,7 @@
       </button>
 
       <div id="resume-slot"></div>
+      <div id="due-slot"></div>
 
       <div class="filter-pills stagger" id="pills" style="--i:1">
         <button class="pill active" data-filter="all">All <span class="count">0</span></button>
@@ -664,6 +708,7 @@
         <div class="panel-head"><h3>Quick drills</h3><small>smart sessions</small></div>
         <div class="drill-row">
           <button class="drill-btn" id="drill-weak"><i data-lucide="target"></i><span><b>Weak-area drill</b><small id="drill-weak-sub">Take a test first</small></span></button>
+          <button class="drill-btn" id="drill-due"><i data-lucide="alarm-clock"></i><span><b id="drill-due-t">Review due (0)</b><small>spaced repetition</small></span></button>
           <button class="drill-btn" id="drill-miss"><i data-lucide="rotate-ccw"></i><span><b>Missed questions</b><small id="drill-miss-sub">0 saved</small></span></button>
         </div>
       </div>
@@ -752,6 +797,12 @@
         </div>
       </div>
 
+      <div class="panel stagger" style="--i:1;margin-bottom:13px">
+        <div class="panel-head"><h3>Streak heatmap</h3><small>last 90 days</small></div>
+        <div class="hm-days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+        <div id="streak-heatmap"></div>
+      </div>
+
       <div class="stat-grid stagger" style="--i:1">
         <div class="stat"><div class="k">Tests taken</div><div class="v" id="stat-tests">0</div></div>
         <div class="stat"><div class="k">Questions answered</div><div class="v" id="stat-questions">0</div></div>
@@ -804,6 +855,11 @@
         </div>
       </div>
 
+      <div class="panel stagger" style="--i:1;margin-bottom:14px">
+        <div class="panel-head"><h3>Badges</h3><small>earned</small></div>
+        <div id="badges-list"></div>
+      </div>
+
       <div class="panel stagger" style="--i:1">
         <div class="menu">
           <button class="menu-item" id="install-btn" style="display:none;">
@@ -821,6 +877,11 @@
             <div class="menu-body"><h4>Join the channel</h4><p>Updates, tips &amp; new features</p></div>
             <span class="chev"><i data-lucide="chevron-right"></i></span>
           </a>
+          <button class="menu-item" id="tour-btn">
+            <div class="menu-ic"><i data-lucide="compass"></i></div>
+            <div class="menu-body"><h4>App tour</h4><p>Replay the tutorial</p></div>
+            <span class="chev"><i data-lucide="chevron-right"></i></span>
+          </button>
           <button class="menu-item" id="help-btn">
             <div class="menu-ic"><i data-lucide="life-buoy"></i></div>
             <div class="menu-body"><h4>Help &amp; support</h4><p>Reach an admin</p></div>
@@ -942,7 +1003,8 @@
     const escH = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const myRef = () => 'STR-' + currentUser.id.replace(/-/g, '').slice(0, 5).toUpperCase();
     const daysLeft = ts => Math.max(0, Math.ceil((new Date(ts).getTime() - Date.now()) / 86400000));
-    const OPAY_LOGO = '<svg class="opay-logo" viewBox="0 0 112 36" aria-label="OPay"><circle cx="18" cy="18" r="17" fill="#fff"/><circle cx="18" cy="18" r="8" fill="none" stroke="#0B9C74" stroke-width="5.5"/><text x="43" y="26" font-family="Outfit, sans-serif" font-size="24" font-weight="700" fill="#fff" letter-spacing="-0.5">OPay</text></svg>';
+    // Account number is set by admin in Payment settings; user edits it themselves.
+    const MONIEPOINT_LOGO = '<svg class="opay-logo" viewBox="0 0 112 36" aria-label="Moniepoint"><rect width="112" height="36" rx="8" fill="#004AAD"/><circle cx="20" cy="18" r="6" fill="#fff"/><text x="36" y="25" font-family="Outfit,sans-serif" font-size="20" font-weight="700" fill="#fff" letter-spacing="-0.5">Moniepoint</text></svg>';
 
     // --- Custom Select Logic ---
     let yearSelectInstance = null;
@@ -1078,13 +1140,13 @@
       }
 
       const card = `<div class="pay-card">
-        <div class="pc-top">${OPAY_LOGO}<span class="pc-tag">Bank transfer</span></div>
+        <div class="pc-top">${MONIEPOINT_LOGO}<span class="pc-tag">Moniepoint transfer</span></div>
         <p class="pc-label">Send exactly</p>
         <div class="pc-price">${naira(a.price)}</div>
         <p class="pc-sub">${a.premium_days} days of full access</p>
         <div class="pc-row"><div><span>Account number</span><b>${escH(a.account_number)}</b></div>
           <button class="pc-copy" data-copy="${escH(a.account_number)}" data-what="Account number" aria-label="Copy account number"><i data-lucide="copy"></i></button></div>
-        <div class="pc-meta"><div><span>Bank</span><b>${escH(a.bank_name || 'OPay')}</b></div>${a.account_name ? `<div><span>Account name</span><b>${escH(a.account_name)}</b></div>` : ''}</div>
+        <div class="pc-meta"><div><span>Bank</span><b>${escH(a.bank_name || 'Moniepoint')}</b></div>${a.account_name ? `<div><span>Account name</span><b>${escH(a.account_name)}</b></div>` : ''}</div>
         <div class="pc-row small"><div><span>Put this in the narration</span><b>${ref}</b></div>
           <button class="pc-copy" data-copy="${ref}" data-what="Reference" aria-label="Copy reference"><i data-lucide="copy"></i></button></div>
       </div>`;
@@ -1289,6 +1351,17 @@
       }
 
       dbTests = testsRes.data || [];
+      // Single-device binding: another account on a device bound to someone else is sent back to login.
+      try {
+        const SUPER = 'estdavid10@gmail.com';
+        const isAdm = (currentUser.email || '').toLowerCase() === SUPER || (profileRes.data && profileRes.data.role === 'admin');
+        const bu = localStorage.getItem('stride_bound_user');
+        if (!isAdm && bu && bu !== currentUser.id && localStorage.getItem('stride_bound_device') === localStorage.getItem('stride_device_id')) {
+          try { localStorage.setItem('stride_login_notice', 'Device bound to another account'); } catch (e) {}
+          await supabase.auth.signOut();
+          return toLogin();
+        }
+      } catch (e) {}
 
       if ((currentUser.email || '').toLowerCase() === 'estdavid10@gmail.com' && dbProfile.role !== 'admin') {
         try {
@@ -1599,7 +1672,7 @@
               try { localStorage.setItem(goalKey(), JSON.stringify({ course })); } catch (e) {}
               dbProfile.target_course = course;
               supabase.from('profiles').update({ target_course: course }).eq('id', currentUser.id).then(() => {}, () => {});
-              syncTarget(); closeModal(); renderGoal(); toast('Target saved 🎯');
+              syncTarget(); closeModal(); renderGoal(); toast('Target saved');
           } }
         ]
       });
@@ -1607,7 +1680,7 @@
     function maybePromptGoal() {
       if (getGoal()) return;
       try { if (+localStorage.getItem('stride_goal_snooze') > Date.now()) return; } catch (e) {}
-      setTimeout(() => { if (!getGoal()) openGoalPrompt(); }, html.classList.contains('no-intro') ? 900 : 3600);
+      setTimeout(() => { if (!getGoal() && !window.__tourActive && !tourPending()) openGoalPrompt(); }, html.classList.contains('no-intro') ? 900 : 3600);
     }
     function weeklyTests() {
       const now = new Date(); const mon = new Date(now); mon.setHours(0, 0, 0, 0); mon.setDate(now.getDate() - ((now.getDay() + 6) % 7));
@@ -1629,7 +1702,7 @@
       const examName = escH(appCfg.cfg_exam_name || 'your exam');
       const daysHtml = days === null ? '' : days > 0 ? `<div class="goal-days">${days}<small>day${days === 1 ? '' : 's'} to ${examName}</small></div>` : days === 0 ? `<div class="goal-days" style="font-size:2rem">Today!<small>${examName}</small></div>` : '';
       const tgtRow = ti ? `<div class="goal-row"><div class="gl"><span>Level ≈ ${lvl} / 400</span><span>${escH(ti.label)}: ${ti.score}</span></div><div class="gbar blue"><div style="width:${Math.min(100, Math.round(lvl / ti.score * 100))}%"></div></div></div>` : '';
-      const wkRow = wk ? (() => { const n = weeklyTests(); return `<div class="goal-row"><div class="gl"><span>Weekly goal</span><span>${Math.min(n, wk)} of ${wk} tests${n >= wk ? ' ✓' : ''}</span></div><div class="gbar"><div style="width:${Math.min(100, Math.round(n / wk * 100))}%"></div></div></div>`; })() : '';
+      const wkRow = wk ? (() => { const n = weeklyTests(); return `<div class="goal-row"><div class="gl"><span>Weekly goal</span><span>${Math.min(n, wk)} of ${wk} tests${n >= wk ? ' · done' : ''}</span></div><div class="gbar"><div style="width:${Math.min(100, Math.round(n / wk * 100))}%"></div></div></div>`; })() : '';
       el.innerHTML = `<div class="panel goal"><div class="goal-top">${daysHtml || '<h3>Your goals</h3>'}<button class="goal-chip" id="goal-edit">${g ? 'Edit target' : 'Set target'}</button></div>${tgtRow}${wkRow}</div>`;
       $('#goal-edit').onclick = openGoalPrompt;
     }
@@ -1647,11 +1720,27 @@
       dbTests.forEach(x => { if (!x.subject || !x.total) return; (map[x.subject] = map[x.subject] || { s: 0, t: 0 }); map[x.subject].s += x.score; map[x.subject].t += x.total; });
       return Object.keys(map).sort((a, b) => map[a].s / map[a].t - map[b].s / map[b].t).slice(0, 2);
     }
+    const dueMistakes = () => getMistakes().filter(x => !x.due || x.due <= Date.now());
+    function renderDue() {
+      const n = dueMistakes().length;
+      const t = $('#drill-due-t'); if (t) t.textContent = `Review due (${n})`;
+      const slot = $('#due-slot'); if (!slot) return;
+      if (!n) { slot.innerHTML = ''; return; }
+      slot.innerHTML = `<button class="trial-banner due-banner" id="due-btn"><span class="tb-ic"><i data-lucide="alarm-clock"></i></span><span class="tb-text">${n} question${n === 1 ? '' : 's'} due for review</span><span class="tb-cta">Review</span></button>`;
+      $('#due-btn').onclick = startDue;
+      icons();
+    }
+    function startDue() {
+      if (!requireAccess()) return;
+      if (!dueMistakes().length) return toast('Nothing due for review right now.');
+      startTest({ retry: true, dueOnly: true, mode: 'practice', subjects: ['Mistakes'], year: 'all', count: 20 });
+    }
     function renderDrills() {
       const w = weakSubjects(), m = getMistakes().length;
+      renderDue();
       const ws = $('#drill-weak-sub'), ms = $('#drill-miss-sub');
       if (ws) ws.textContent = w.length ? w.join(' + ') + ' · 20 Qs' : 'Take a test first';
-      if (ms) ms.textContent = m ? m + ' saved to retry' : 'Nothing missed yet';
+      if (ms) ms.textContent = m ? m + ' saved' + (dueMistakes().length ? ' · ' + dueMistakes().length + ' due' : '') : 'Nothing missed yet';
     }
     function drillWeak() {
       if (!requireAccess()) return;
@@ -1660,6 +1749,7 @@
       startTest({ subjects: w, year: 'all', count: 20, difficulty: practice.diff || 'medium', mode: 'practice', time: 0 });
     }
     $('#drill-weak').addEventListener('click', drillWeak);
+    $('#drill-due').addEventListener('click', startDue);
     $('#drill-weak-2').addEventListener('click', drillWeak);
     $('#drill-miss').addEventListener('click', () => {
       if (!requireAccess()) return;
@@ -1686,9 +1776,10 @@
       const rows = lbData.rows;
       if (!rows.length) { el.innerHTML = ''; return; }
       const label = (period === 'month' ? 'Last 30 days' : period === 'all' ? 'All time' : 'Last 7 days') + (subj !== 'all' ? ' · ' + subj : '') + (grp === 'course' ? ' · My course' : '');
-      const medal = i => i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1) + '.';
+      const medal = i => i < 3 ? `<i data-lucide="medal" style="width:18px;height:18px;vertical-align:-4px;color:${['#F8CB4A', '#C0C0C0', '#CD7F32'][i]}"></i>` : (i + 1) + '.';
       el.innerHTML = `<div class="panel" style="margin-top:16px"><div class="panel-head"><h3>${escH(appCfg.cfg_lb_title || 'Leaderboard')}</h3><small>${escH(label)}</small></div>` +
         rows.map((r, i) => `<div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid rgba(255,255,255,.06);animation:slideDown .5s ${i * 50}ms var(--ease) both;${r.id === currentUser.id ? 'color:var(--orange);' : ''}"><span>${medal(i)} ${escH(r.name || 'Student')}</span><span>${r.score} pts</span></div>`).join('') + '</div>';
+      icons();
     }
     const seenAnn = () => { try { return JSON.parse(localStorage.getItem('stride_seen_ann') || '[]'); } catch (e) { return []; } };
     function markAnnSeen() { try { localStorage.setItem('stride_seen_ann', JSON.stringify(announcements.map(a => a.id))); } catch (e) {} updateAnnDot(); }
@@ -1725,14 +1816,14 @@
       }
       const n = dailyNotes.find(x => String(x.id) === String(openNoteId));
       if (!n) {
-        root.innerHTML = '<div class="stack" style="padding-bottom:130px">' + dailyNotes.map(x => `
-          <div class="panel ann" style="cursor:pointer" onclick="openNote('${x.id}')">
-            <div class="ann-top" style="margin-bottom:0">
-              <span class="ann-ico"><i data-lucide="book-open"></i></span>
-              <div class="ann-meta"><h3>${escH(x.title)}</h3><small>${escH(x.subject || 'General')} &middot; ${x.short_test_count > 0 ? x.short_test_count + ' questions' : 'No questions'}</small></div>
-              ${noteRead(x.id) ? '<span class="ann-tag">Read</span>' : ''}
-            </div>
-          </div>`).join('') + '</div>';
+        const tints = ['var(--orange)', 'var(--yellow)', 'var(--cream)', 'var(--green)', 'var(--blue)'];
+        const rots = [-2.2, 1.8, -1.4, 2.2, -1.8, 1.4];
+        root.innerHTML = '<div class="note-grid">' + dailyNotes.map((x, i) => `
+          <button class="note-slant" style="background:${tints[i % tints.length]};--rot:${rots[i % rots.length]}deg;--n:${i}" onclick="openNote('${x.id}')">
+            ${noteRead(x.id) ? '<span class="ns-read">Read</span>' : ''}
+            <span class="ns-ic"><i data-lucide="book-open"></i></span>
+            <span><h3>${escH(x.title)}</h3><small>${escH(x.subject || 'General')} &middot; ${x.short_test_count > 0 ? x.short_test_count + ' questions' : 'No questions'}</small></span>
+          </button>`).join('') + '</div>';
         icons(); return;
       }
       const qCount = n.short_test_count > 0 ? n.short_test_count : 0;
@@ -2240,8 +2331,44 @@
       el.innerHTML = html;
     }
 
+    function renderStreakHeatmap() {
+      const el = $('#streak-heatmap'); if (!el) return;
+      const ymd = d => d.toLocaleDateString('en-CA');
+      const counts = {};
+      dbTests.forEach(t => { const k = ymd(new Date(t.date)); counts[k] = (counts[k] || 0) + 1; });
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const start = new Date(today); start.setDate(start.getDate() - 90);
+      const lead = (start.getDay() + 6) % 7; // Monday-first
+      start.setDate(start.getDate() - lead);
+      let cells = '';
+      for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) {
+        const k = ymd(d), n = counts[k] || 0;
+        const lv = n >= 3 ? 'l3' : n === 2 ? 'l2' : n === 1 ? 'l1' : '';
+        cells += `<div class="hm-cell ${lv}" title="${k}: ${n} test${n === 1 ? '' : 's'}"></div>`;
+      }
+      el.innerHTML = `<div class="hm-grid">${cells}</div>`;
+    }
+    function computeBadges(p, tests) {
+      const streak = (p && p.streak_count) || 0;
+      const avg = sub => { const r = tests.filter(t => t.subject === sub && t.total); return r.length >= 5 ? r.reduce((a, t) => a + t.score / t.total * 100, 0) / r.length : 0; };
+      return [
+        { icon: 'flame', title: 'Streak starter', subtitle: '3-day streak', on: streak >= 3 },
+        { icon: 'zap', title: 'Fire keeper', subtitle: '7-day streak', on: streak >= 7 },
+        { icon: 'calendar-check', title: 'Month strong', subtitle: '30-day streak', on: streak >= 30 },
+        { icon: 'calculator', title: 'Math master', subtitle: '75%+ avg in 5+ tests', on: avg('Mathematics') >= 75 },
+        { icon: 'book-open', title: 'English ace', subtitle: '75%+ avg in 5+ tests', on: avg('English') >= 75 },
+        { icon: 'timer', title: 'Mock ready', subtitle: 'Finish a mock', on: tests.some(t => t.mode === 'mock') },
+        { icon: 'trophy', title: 'Perfect score', subtitle: 'Score 100% once', on: tests.some(t => t.total && t.score === t.total) }
+      ];
+    }
+    function renderBadges() {
+      const el = $('#badges-list'); if (!el) return;
+      el.innerHTML = '<div class="badge-grid">' + computeBadges(dbProfile, dbTests).map(b => `<div class="badge-card ${b.on ? '' : 'locked'}"><i data-lucide="${b.icon}"></i><span><b>${escH(b.title)}</b><small>${escH(b.subtitle)}</small></span></div>`).join('') + '</div>';
+      icons();
+    }
     function renderAnalytics() {
       renderJambCalendar();
+      renderStreakHeatmap();
       const a = buildAnalytics();
       $('#stat-tests').textContent = dbTests.length;
       $('#stat-questions').textContent = a.questions;
@@ -2310,6 +2437,7 @@
       $('#p-tests').textContent = dbTests.length;
       $('#p-streak').textContent = dbProfile.streak_count || 0;
       $('#p-score').textContent = a.overall + '%';
+      renderBadges();
       
       $('#channel-btn').addEventListener('click', e => { if (!channelLink) { e.preventDefault(); toast('Channel link not set yet'); } });
     }
@@ -2463,7 +2591,7 @@
       const t = new Date(); t.setHours(hr, 0, 0, 0);                    // admin-set hour (default 7 PM)
       let ms = t - Date.now(); if (ms < 0) ms = 60 * 1000;               // past 7pm: nudge in a minute
       reminderTimer = setTimeout(() => {
-        if (dbProfile.last_login_date !== ymd(new Date())) showNote(appCfg.cfg_remind_title || 'Your streak is on the line 🔥', appCfg.cfg_remind_text || ('Take a quick test to keep your ' + effStreak() + '-day streak alive.'), 'streak');
+        if (dbProfile.last_login_date !== ymd(new Date())) showNote(appCfg.cfg_remind_title || 'Your streak is on the line', appCfg.cfg_remind_text || ('Take a quick test to keep your ' + effStreak() + '-day streak alive.'), 'streak');
       }, ms);
     }
     $('#notif-btn').addEventListener('click', async () => {
@@ -2476,7 +2604,7 @@
         toast(off ? 'Reminders turned off.' : 'Reminders turned on.');
       } else {
         const r = await Notification.requestPermission();
-        if (r === 'granted') { localStorage.setItem('stride_notif', 'on'); showNote('Stride', 'Reminders are on. Finish a test daily to keep your streak 🔥', 'welcome'); }
+        if (r === 'granted') { localStorage.setItem('stride_notif', 'on'); showNote('Stride', 'Reminders are on. Finish a test daily to keep your streak', 'welcome'); }
       }
       renderNotifBtn(); scheduleReminder();
     });
@@ -2495,7 +2623,65 @@
       if (!window.__goalAsked) { window.__goalAsked = true; maybePromptGoal(); }
     }
 
+    // ---- Interactive tour (first launch, replay from Profile) ----
+    const TOUR_KEY = () => 'stride_tour_done_' + (currentUser ? currentUser.id : 'x');
+    function tourPending() { try { return !localStorage.getItem(TOUR_KEY()); } catch (e) { return false; } }
+    const TOUR_STEPS = [
+      { title: 'Welcome to Stride', text: 'A quick tour, about 30 seconds. Tap the glowing buttons as we go.' },
+      { nav: 'home', tap: true, title: 'Home', text: 'Your streak, goals and daily reading live here. Tap Home.' },
+      { nav: 'practice', tap: true, title: 'Practice', text: 'Build a test by subject, year and difficulty. Tap Practice.' },
+      { sel: '.drill-row', page: 'practice', title: 'Quick drills', text: 'Weak-area drills and spaced-repetition reviews of questions you missed.' },
+      { nav: 'notes', tap: true, title: 'Notes', text: 'Short reads with questions attached. Tap Notes.' },
+      { nav: 'stats', tap: true, title: 'Stats', text: 'Track your scores and streak. Tap Stats.' },
+      { sel: '#streak-heatmap', page: 'stats', title: 'Streak heatmap', text: 'Every test you take lights up a day. Keep the squares glowing.' },
+      { nav: 'profile', tap: true, title: 'Profile', text: 'Badges, settings and help. Tap Profile.' },
+      { sel: '#badges-list', page: 'profile', title: 'Badges', text: 'Earn them with streaks, strong subjects and mocks.' },
+      { title: "You're set", text: 'Take your first test and start your streak. You can replay this tour from Profile any time.' }
+    ];
+    function startTour() {
+      const root = $('#tour'); if (!root) return;
+      const spot = root.querySelector('.t-spot'), card = root.querySelector('.t-card');
+      let i = 0, offTap = null;
+      window.__tourActive = true; root.hidden = false;
+      const finish = () => {
+        window.__tourActive = false; root.hidden = true;
+        try { localStorage.setItem(TOUR_KEY(), '1'); } catch (e) {}
+        window.removeEventListener('resize', place);
+        const home = document.querySelector('.nav-item[data-target="home"]'); if (home) home.click();
+        if (!getGoal()) setTimeout(openGoalPrompt, 500);
+      };
+      const target = st => st.nav ? document.querySelector('.nav-item[data-target="' + st.nav + '"]') : st.sel ? document.querySelector(st.sel) : null;
+      function place() {
+        const st = TOUR_STEPS[i], el = target(st);
+        if (!el) { root.classList.add('center'); card.style.top = ''; card.style.bottom = ''; return; }
+        root.classList.remove('center');
+        const r = el.getBoundingClientRect(), pad = 8;
+        spot.style.cssText = `left:${r.left - pad}px;top:${r.top - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px;`;
+        const below = r.top < innerHeight / 2;
+        card.style.top = below ? Math.min(innerHeight - 220, r.bottom + 22) + 'px' : '';
+        card.style.bottom = below ? '' : Math.max(16, innerHeight - r.top + 22) + 'px';
+      }
+      function show() {
+        const st = TOUR_STEPS[i], last = i === TOUR_STEPS.length - 1;
+        if (offTap) { offTap(); offTap = null; }
+        if (st.page) { const nb = document.querySelector('.nav-item[data-target="' + st.page + '"]'); if (nb && !nb.classList.contains('active')) nb.click(); }
+        const el = target(st);
+        if (el && st.sel) el.scrollIntoView({ block: 'center', behavior: 'auto' });
+        card.innerHTML = `<h3>${escH(st.title)}</h3><p>${escH(st.text)}</p><div class="t-foot"><div class="t-dots">${TOUR_STEPS.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div><span style="display:flex;align-items:center;gap:6px">${last ? '' : '<button class="t-skip" id="t-skip">Skip</button>'}<button class="t-next" id="t-next">${last ? 'Start' : st.tap ? 'Tap it for me' : 'Next'}</button></span></div>`;
+        card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
+        $('#t-next').onclick = () => { if (st.tap && el) el.click(); else go(); };
+        const sk = $('#t-skip'); if (sk) sk.onclick = finish;
+        if (st.tap && el) { const h = () => setTimeout(go, 380); el.addEventListener('click', h, { once: true }); offTap = () => el.removeEventListener('click', h); }
+        setTimeout(place, 60); setTimeout(place, 400);
+      }
+      function go() { if (i >= TOUR_STEPS.length - 1) return finish(); i++; show(); }
+      window.addEventListener('resize', place);
+      show();
+    }
+    $('#tour-btn').addEventListener('click', () => { const h = document.querySelector('.nav-item[data-target="home"]'); if (h) h.click(); setTimeout(startTour, 300); });
+
     initApp().then(() => {
+      if (tourPending()) setTimeout(startTour, html.classList.contains('no-intro') ? 700 : 3600);
       if (splash && !html.classList.contains('no-intro')) {
         setTimeout(endSplash, 2900);
         splash.addEventListener('click', endSplash);
