@@ -1,6 +1,6 @@
 /* Stride service worker */
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-const VERSION = 'stride-v9';
+const VERSION = 'stride-v11';
 
 // Only list files that ACTUALLY exist. Anything missing here breaks install.
 const SHELL = [
@@ -9,7 +9,7 @@ const SHELL = [
   'app.html',
   'test.html',
   'admin.html',
-  'app.css?v=9', 'test.css?v=9', 'index.css?v=9', 'theme.css?v=9', 'ui.css?v=9', 'theme.js?v=9', 'subjects.js?v=9',
+  'app.css?v=11', 'test.css?v=11', 'index.css?v=11', 'theme.css?v=11', 'ui.css?v=11', 'theme.js?v=11', 'subjects.js?v=11',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',

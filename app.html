@@ -12,8 +12,8 @@
   <meta name="apple-mobile-web-app-title" content="Stride" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Stride | App</title>
-  <script src="theme.js?v=9"></script>
-  <script src="subjects.js?v=9"></script>
+  <script src="theme.js?v=11"></script>
+  <script src="subjects.js?v=11"></script>
 
   <script>
     document.documentElement.style.visibility = 'hidden';
@@ -36,9 +36,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
   <script src="https://unpkg.com/lucide@0.454.0"></script>
 
-  <link rel="stylesheet" href="app.css?v=9">
-  <link rel="stylesheet" href="theme.css?v=9">
-  <link rel="stylesheet" href="ui.css?v=9">
+  <link rel="stylesheet" href="app.css?v=11">
+  <link rel="stylesheet" href="theme.css?v=11">
+  <link rel="stylesheet" href="ui.css?v=11">
   <script>
     if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   </script>
@@ -59,9 +59,7 @@
     </div>
   </div>
 
-  <div class="bg" aria-hidden="true">
-    
-  </div>
+  <div class="bg" aria-hidden="true"><div class="glow g-blue"></div><div class="glow g-orange"></div><div class="glow g-deep"></div></div>
 
   <div class="page-container">
     <section id="home" class="page active">
@@ -1557,18 +1555,20 @@
       }
     })();
 
-    let courseKey = 'sciences';
-    if (dbProfile.course) {
-      const c = dbProfile.course.toLowerCase();
-      if (c.includes('art')) courseKey = 'arts';
-      else if (c.includes('comm') || c.includes('bus')) courseKey = 'commerce';
-      else if (c.includes('sci')) courseKey = 'sciences';
-      else courseKey = c.split(/[\s,/-]+/)[0];
+    // course is re-read from the profile every time (never frozen at load), so Arts/Commerce students never get Sciences
+    let courseKey = 'sciences', userCourse = 'Sciences', groupSubjects = SUBJECT_MAP.sciences;
+    function recomputeCourse() {
+      const raw = String((dbProfile && dbProfile.course) || ((currentUser && currentUser.user_metadata && currentUser.user_metadata.course) || 'Sciences'));
+      const c = raw.toLowerCase();
+      let k;
+      if (c.includes('art')) k = 'arts';
+      else if (c.includes('comm') || c.includes('bus')) k = 'commerce';
+      else if (c.includes('sci')) k = 'sciences';
+      else k = c.split(/[\s,/-]+/)[0];
+      if (!SUBJECT_MAP[k]) k = 'sciences';
+      courseKey = k; userCourse = raw; groupSubjects = SUBJECT_MAP[k];
     }
-    if (!SUBJECT_MAP[courseKey]) courseKey = 'sciences';
-
-    const userCourse = dbProfile.course || 'Sciences';
-    const groupSubjects = SUBJECT_MAP[courseKey];
+    recomputeCourse();
     const normSubj = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     // map a subject to the exact name used in the question bank (e.g. "Literature" -> "Literature in English")
     const resolveSubject = name => {
@@ -1578,6 +1578,7 @@
     const hasCombo = () => Array.isArray(dbProfile.subjects) && dbProfile.subjects.length === 4;
     let subjects = groupSubjects;
     function rebuildSubjects() {
+      recomputeCourse();
       const base = hasCombo() ? dbProfile.subjects : ((window.STRIDE_DEFAULT_COMBO || {})[courseKey] || groupSubjects.slice(0, 4));
       subjects = base.map(resolveSubject);
     }

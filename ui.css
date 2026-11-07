@@ -1,6 +1,7 @@
 /* Stride UI layer: flat, modern, fast. Loaded last on index, app and test. */
 :root{
   color-scheme:dark;
+  --c-blue:rgba(24,120,170,.5); --c-orange:rgba(255,110,30,.42); --c-deep:rgba(255,105,28,.34);
   --bg:#0c0c0e; --surface:#151518; --surface-2:#1d1d21;
   --text:#f4f4f5; --on-text:#0c0c0e; --muted:#92929b;
   --line:rgba(255,255,255,.1); --fg:255 255 255; --sink:0 0 0;
@@ -10,6 +11,7 @@
 }
 html[data-theme="light"]{
   color-scheme:light;
+  --c-blue:rgba(80,160,225,.38); --c-orange:rgba(240,120,70,.32); --c-deep:rgba(240,150,90,.28);
   --bg:#f5f5f3; --surface:#ffffff; --surface-2:#ecece9;
   --text:#121214; --on-text:#ffffff; --muted:#686870;
   --line:rgba(18,18,20,.11); --fg:18 18 20; --sink:232 232 228;
@@ -19,7 +21,7 @@ html[data-theme="light"]{
 /* ---- surfaces: no glow, no gradients, no blur ---- */
 html,body{background:var(--bg);color:var(--text)}
 .bg{background:var(--bg)!important;contain:strict}
-.bg>*,.bg::before,.bg::after,.glow,.splash-glow,.splash-dots,#streak-glow,.brand::before,.brand::after,.btn::before,.btn::after,.pay-card::before,.pay-card::after,.feat::after{display:none!important}
+.bg::before,.bg::after,.splash-glow,.splash-dots,#streak-glow,.brand::before,.brand::after,.btn::before,.btn::after,.pay-card::before,.pay-card::after,.feat::after{display:none!important}
 #splash{background:var(--bg)}
 .logo,.splash-logo{filter:none!important;animation:none}
 .splash-logo{animation:logoIn 1s var(--ease) .15s both}
@@ -106,3 +108,12 @@ html:not([data-theme="light"]) .seg button.on{background:var(--text);color:var(-
 .sub-label{flex:0 0 100%;width:100%;font-size:.74rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 2px}
 .sub-label:first-child{margin-top:0}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+.badge{background:var(--text);color:var(--on-text)}
+.badge svg{color:var(--on-text);stroke:currentColor}
+.dock{background:var(--bg);padding:10px 0 calc(12px + env(safe-area-inset-bottom,0px))}
+
+/* big flat circles: solid colour, transform-only motion (no blur, no gradient, cheap on the GPU) */
+.glow{display:block;position:absolute;border-radius:50%;pointer-events:none;will-change:transform}
+.g-blue{background:var(--c-blue)!important}
+.g-orange,.g-arc{background:var(--c-orange)!important}
+.g-deep{background:var(--c-deep)!important}

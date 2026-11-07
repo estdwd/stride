@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="Stride" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Stride | Test</title>
-  <script src="theme.js?v=9"></script>
+  <script src="theme.js?v=11"></script>
 
   <script>
     document.documentElement.style.visibility = 'hidden';
@@ -29,18 +29,16 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
   <script src="https://unpkg.com/lucide@0.454.0"></script>
 
-  <link rel="stylesheet" href="test.css?v=9">
-  <link rel="stylesheet" href="theme.css?v=9">
-  <link rel="stylesheet" href="ui.css?v=9">
+  <link rel="stylesheet" href="test.css?v=11">
+  <link rel="stylesheet" href="theme.css?v=11">
+  <link rel="stylesheet" href="ui.css?v=11">
   <script>
     if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   </script>
 </head>
 <body>
 
-  <div class="bg" aria-hidden="true">
-    
-  </div>
+  <div class="bg" aria-hidden="true"><div class="glow g-blue"></div><div class="glow g-orange"></div><div class="glow g-deep"></div></div>
 
   <header class="test-header">
     <button class="back-btn" id="back-btn" aria-label="Exit test"><i data-lucide="x"></i></button>
