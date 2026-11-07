@@ -1,6 +1,6 @@
 /* Stride service worker */
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-const VERSION = 'stride-v6';
+const VERSION = 'stride-v9';
 
 // Only list files that ACTUALLY exist. Anything missing here breaks install.
 const SHELL = [
@@ -9,10 +9,13 @@ const SHELL = [
   'app.html',
   'test.html',
   'admin.html',
+  'app.css?v=9', 'test.css?v=9', 'index.css?v=9', 'theme.css?v=9', 'ui.css?v=9', 'theme.js?v=9', 'subjects.js?v=9',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',
-  'icons/apple-touch-icon.png'
+  'icons/apple-touch-icon.png',
+  'icons/badge-96.png',
+  'icons/maskable-512.png'
 ];
 
 self.addEventListener('install', e => {
@@ -40,20 +43,20 @@ self.addEventListener('fetch', e => {
   // Never cache Supabase / API calls
   if (url.hostname.endsWith('supabase.co')) return;
   
-  // Pages: network-first, fall back to cache (offline)
+  // Pages: serve the saved copy instantly and refresh it in the background (opens fast, works offline)
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req)
-      .then(res => {
-        const c = res.clone();
-        caches.open(VERSION).then(x => x.put(req, c));
-        return res;
+      caches.match(req, { ignoreSearch: true }).then(hit => {
+        const net = fetch(req).then(res => {
+          if (res && res.ok) { const c = res.clone(); caches.open(VERSION).then(x => x.put(req, c)); }
+          return res;
+        }).catch(() => hit || caches.match('app.html'));
+        return hit || net;
       })
-      .catch(() => caches.match(req).then(r => r || caches.match('app.html')))
     );
     return;
   }
-  
+
   // Everything else: stale-while-revalidate
   e.respondWith(
     caches.match(req).then(hit => {
@@ -76,7 +79,7 @@ self.addEventListener('push', e => {
   e.waitUntil(self.registration.showNotification(d.title || 'Stride', {
     body: d.body || 'Time to keep your streak alive',
     icon: 'icons/icon-192.png',
-    badge: 'icons/icon-192.png',
+    badge: 'icons/badge-96.png',
     tag: d.tag || 'stride',
     data: { url: d.url || './app.html' }
   }));

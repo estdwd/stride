@@ -1,0 +1,108 @@
+/* Stride UI layer: flat, modern, fast. Loaded last on index, app and test. */
+:root{
+  color-scheme:dark;
+  --bg:#0c0c0e; --surface:#151518; --surface-2:#1d1d21;
+  --text:#f4f4f5; --on-text:#0c0c0e; --muted:#92929b;
+  --line:rgba(255,255,255,.1); --fg:255 255 255; --sink:0 0 0;
+  --orange:#EB7650; --accent:#EB7650;
+  --r-card:24px; --r-panel:22px; --r-ctl:16px;
+  --ease:cubic-bezier(.22,1,.36,1); --spring:cubic-bezier(.34,1.5,.64,1);
+}
+html[data-theme="light"]{
+  color-scheme:light;
+  --bg:#f5f5f3; --surface:#ffffff; --surface-2:#ecece9;
+  --text:#121214; --on-text:#ffffff; --muted:#686870;
+  --line:rgba(18,18,20,.11); --fg:18 18 20; --sink:232 232 228;
+  --orange:#E0572B; --accent:#E0572B;
+}
+
+/* ---- surfaces: no glow, no gradients, no blur ---- */
+html,body{background:var(--bg);color:var(--text)}
+.bg{background:var(--bg)!important;contain:strict}
+.bg>*,.bg::before,.bg::after,.glow,.splash-glow,.splash-dots,#streak-glow,.brand::before,.brand::after,.btn::before,.btn::after,.pay-card::before,.pay-card::after,.feat::after{display:none!important}
+#splash{background:var(--bg)}
+.logo,.splash-logo{filter:none!important;animation:none}
+.splash-logo{animation:logoIn 1s var(--ease) .15s both}
+*{box-shadow:none}
+.brand{background:var(--surface);border:1px solid var(--line)}
+
+.panel,.stat,.note-container,.p-stats,.info,.summary-box,.q-card,.result-hero,.result-breakdown,.review-item,.sheet-card,.year-card,.timer,.back-btn,.round-btn,.stepper,.badge-card,.feat{
+  background:var(--surface);border:1px solid var(--line);box-shadow:none}
+.panel,.stat,.note-container{transition:transform .35s var(--ease),border-color .25s}
+@media (hover:hover){.panel:hover,.stat:hover,.feat:hover{border-color:rgb(var(--fg)/.22)}}
+.hm-cell{background:rgb(var(--fg)/.06)}
+
+/* ---- inputs ---- */
+.field,.input-field,.dd-btn,.tc-field,.upg .fld,.dd-search,.cell{
+  background:var(--surface);border:1px solid var(--line);color:var(--text);border-radius:var(--r-ctl);box-shadow:none}
+.field:focus,.input-field:focus,.input-group.open .dd-btn,.tc-field:focus,.upg .fld:focus{
+  border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px rgb(235 118 80/.18)}
+.dd-panel,.dd-list{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-ctl)}
+.dd-opt:hover,.dd-opt:active{background:rgb(var(--fg)/.07)}
+.dd-opt.sel{color:var(--accent)}
+.status:not(:empty){background:var(--surface);border:1px solid var(--line)}
+
+/* ---- buttons, chips ---- */
+.btn{background:var(--accent);color:#fff;border-radius:var(--r-ctl);font-weight:600;box-shadow:none;transition:transform .25s var(--ease),opacity .2s,background .2s}
+html:not([data-theme="light"]) .btn{color:#1a0d06}
+.btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:none}
+.btn:not(:disabled):active{transform:scale(.97);box-shadow:none}
+.m-btn{background:rgb(var(--fg)/.07);border-radius:var(--r-ctl);color:var(--text)}
+.m-btn.primary{background:var(--text);color:var(--on-text)}
+.m-btn.danger{color:var(--red,#E8615A)}
+.m-btn.ghost{background:transparent;color:var(--muted)}
+.pill,.subject,.sp-chip,.perks span{background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.pill.active,.subject.on{background:var(--text);border-color:var(--text);color:var(--on-text)}
+.pill.active .count{background:rgb(var(--fg)/.14);color:var(--on-text);border-color:transparent}
+.subject.on .dot{background:var(--green,#97D86E)}
+.sp-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.seg{background:var(--surface-2);border:1px solid var(--line);border-radius:14px}
+.seg button{border-radius:10px;color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--text);border:1px solid var(--line)}
+html:not([data-theme="light"]) .seg button.on{background:var(--text);color:var(--on-text)}
+.rv-tabs button.on{background:var(--text);color:var(--on-text);border-color:var(--text)}
+.tag-soon,.menu-ic,.test-icon,.m-btn,.pill .count{color:var(--text)}
+.toast{background:var(--text);color:var(--on-text);box-shadow:none}
+.trial-banner .tb-cta{background:var(--text);color:var(--on-text)}
+
+/* ---- nav ---- */
+.dock{background:transparent;padding:24px 0 calc(14px + env(safe-area-inset-bottom,0px))}
+.dock-inner{background:var(--surface);border:1px solid var(--line);box-shadow:none;border-radius:30px}
+.nav-item{color:var(--muted)}
+.nav-item.active{color:var(--text);background:rgb(var(--fg)/.09);box-shadow:none}
+.fab{background:var(--accent);color:#fff;border:0;box-shadow:none}
+.nav-bar{background:var(--bg);border-top:1px solid var(--line)}
+
+/* ---- sheets, payment, misc ---- */
+.modal-card{background:var(--surface);border:1px solid var(--line);border-bottom:0;border-radius:28px 28px 0 0}
+.modal-card p{color:var(--muted)}
+.upg{background:var(--bg)}
+.pay-card{background:#2563EB;color:#fff;box-shadow:none;border-radius:var(--r-card)}
+.pc-tag,.pc-row{border-color:rgba(255,255,255,.28)}
+.card.saved .heart{background:var(--ink);color:#fff}
+.tasks li.done .chk::after{border-color:#fff}
+.tasks li{background:rgba(0,0,0,.1)}
+.tasks li.done{box-shadow:none}
+.gbar{background:rgb(var(--fg)/.09)}
+.card:hover{filter:none}
+.card.all-done,.streak.lit,.streak.glow-play{animation:none}
+
+/* ---- motion ---- */
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes scrim{from{opacity:0}to{opacity:1}}
+.page.active{animation:fadeUp .38s var(--ease) both}
+.intro{animation:rise .6s var(--ease) backwards;animation-delay:calc(var(--i,0)*70ms + 60ms)}
+.wipe{animation:rise .7s var(--ease) .1s backwards}
+[id^="view-"].active{animation:rise .45s var(--ease) both}
+.subject,.sp-chip{animation:rise .4s var(--ease) backwards;animation-delay:calc(var(--n,0)*28ms)}
+.subject,.sp-chip,.pill,.nav-item,.fab,.m-btn,.btn{transition:transform .3s var(--spring),background .2s,color .2s,border-color .2s,opacity .2s}
+.subject:active,.sp-chip:active,.pill:active,.m-btn:active,.fab:active,.nav-item:active{transform:scale(.94)}
+.subject.on,.sp-chip.on,.pill.active{animation:pickPop .35s var(--spring)}
+@keyframes pickPop{0%{transform:scale(.92)}100%{transform:scale(1)}}
+.modal-card{animation:sheetUp .38s var(--ease)}
+.modal,.modal-backdrop,.overlay{animation:scrim .25s ease both}
+.perks span{animation:rise .5s var(--ease) backwards;animation-delay:calc(var(--n,0)*60ms + 400ms)}
+.sub-label{flex:0 0 100%;width:100%;font-size:.74rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:14px 0 2px}
+.sub-label:first-child{margin-top:0}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
